@@ -1,8 +1,5 @@
 var ADMIN_KEY='rav-fleet-x9k2m7'; // ใช้เลือกหน้าเว็บเท่านั้น ไม่ใช่การยืนยันสิทธิ์ Admin
 var SHEETS={STAFF:'Staff',REQUESTS:'Requests',VEHICLES:'Vehicles',DRIVERS:'Drivers'};
-var APP_VERSION='V1.2.9';
-var REQ_DRIVER_NAME_COL_='ชื่อผู้ขับรถที่ผู้ขอระบุ'; // V1.2.9: ชื่อผู้ขับรถที่ผู้ขอใช้รถระบุเอง (แยกจาก DRIVER_COL_ ที่ Admin จัดสรร ห้ามเขียนทับกัน)
-var REQ_PHONE_COL_='เบอร์โทรผู้ขอใช้รถ'; // V1.2.9: เบอร์ติดต่อผู้ขอใช้รถ (เฉพาะ Admin เห็น ไม่ส่งออกใน getBookingsForMonth)
 var DRIVER_COL_='คนขับที่จัด'; // คอลัมน์ในชีต Requests (ถ้ายังไม่มี ระบบจะสร้างให้อัตโนมัติเมื่อบันทึกคนขับครั้งแรก)
 var STATUS={PENDING:'รอดำเนินการ',APPROVED:'อนุมัติแล้ว',ASSIGNED:'จัดรถแล้ว',IN_USE:'กำลังใช้งาน',DONE:'เสร็จสิ้น',CANCELLED:'ยกเลิก',REJECTED:'ปฏิเสธ'};
 var ADMIN_NAMES=['Admin01','Admin02','Admin03','Admin00','SAdmin'];
@@ -67,144 +64,6 @@ function sheet_(name){var sh=ss_().getSheetByName(name);if(!sh)throw new Error('
 function rowsToObjects_(sheet){var values=sheet.getDataRange().getValues();if(values.length<2)return [];var headers=values[0],out=[];for(var i=1;i<values.length;i++){var row=values[i];if(row.join('')==='')continue;var obj={};for(var c=0;c<headers.length;c++)obj[headers[c]]=row[c];obj._row=i+1;out.push(obj);}return out;}
 function formatDate_(v){if(!v)return '';var d=v instanceof Date?v:new Date(v);if(isNaN(d.getTime()))return String(v);return Utilities.formatDate(d,Session.getScriptTimeZone(),'yyyy-MM-dd');}
 function formatTime_(v){if(!v)return '';if(v instanceof Date)return Utilities.formatDate(v,Session.getScriptTimeZone(),'HH:mm');var s=String(v).trim();if(/^\d{1,2}:\d{2}:\d{2}$/.test(s))return s.substring(0,5);return s;}
-// ===== V1.2.9: คอลัมน์ใหม่ + ตัวช่วยอ่าน/พิมพ์ =====
-function ensureRequestColumns_(sh){
-  // เพิ่มหัวคอลัมน์ใหม่ต่อท้ายชีต Requests เมื่อยังไม่มี (ไม่แตะคอลัมน์/ข้อมูลเดิม)
-  var lastCol=Math.max(sh.getLastColumn(),1),headers=sh.getRange(1,1,1,lastCol).getValues()[0];
-  [REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_].forEach(function(name){
-    if(headers.indexOf(name)>=0)return;
-    var need=headers.length+1;
-    if(sh.getMaxColumns()<need)sh.insertColumnsAfter(sh.getMaxColumns(),need-sh.getMaxColumns());
-    sh.getRange(1,need).setValue(name);
-    if(name===REQ_PHONE_COL_)sh.getRange(2,need,Math.max(sh.getMaxRows()-1,1),1).setNumberFormat('@'); // เก็บเป็นข้อความ กันเลข 0 นำหน้าหาย
-    headers.push(name);
-  });
-  return headers;
-}
-function cleanPhone_(v){return String(v==null?'':v).trim().replace(/[^\d+\-\s()]/g,'').slice(0,30);}
-function formatPhone_(v){var s=String(v==null?'':v).trim();return /^\d{9}$/.test(s)?'0'+s:s;} // ข้อมูลที่ Sheets แปลงเป็นตัวเลขจนเลข 0 นำหน้าหาย
-function requestToClient_(r){
-  return {id:String(r.id||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),requesterPhone:formatPhone_(r[REQ_PHONE_COL_]),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||'')};
-}
-// อ่านอย่างเดียว: ดึงข้อมูลล่าสุดของคำขอ 1 รายการตาม Request ID สำหรับพิมพ์ใบอนุญาต (ไม่เปลี่ยนสถานะ ไม่เขียนชีต ไม่เขียน AuditLog)
-function getRequestForPrint(id,adminToken){
-  requireAdminSession_(adminToken);
-  id=String(id==null?'':id).trim();
-  if(!id)throw new Error('ไม่ได้ระบุรหัสคำขอ (Request ID)');
-  var found=findRequestRowById_(id);
-  if(!found)throw new Error('ไม่พบรายการคำขอ: '+id);
-  return requestToClient_(found.object);
-}
-// ===== V1.2.9: สรุปรายงานการใช้รถประจำวัน + ส่งเข้า LINE กลุ่ม =====
-// ตั้งค่า LINE ใน Project Settings > Script properties (ไม่ฝังใน Client/ชีต):
-//   LINE_CHANNEL_TOKEN = Channel access token (long-lived) ของ LINE Official Account ที่เปิด Messaging API
-//   LINE_GROUP_ID      = groupId ของกลุ่มไลน์ที่เชิญบอทเข้าไปแล้ว (ขึ้นต้นด้วย C)
-var LINE_TOKEN_PROP_='LINE_CHANNEL_TOKEN',LINE_GROUP_PROP_='LINE_GROUP_ID',LINE_LASTSENT_PROP_='LINE_LAST_SENT_DATE';
-var DAILY_REPORT_STATUSES_=[STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE,STATUS.DONE];
-function todayKey_(){return Utilities.formatDate(new Date(),'Asia/Bangkok','yyyy-MM-dd');}
-function thaiLongDate_(key){
-  var m=String(key||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return String(key||'');
-  var d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));
-  var days=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
-  var months=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-  return 'วัน'+days[d.getDay()]+'ที่ '+Number(m[3])+' '+months[Number(m[2])-1]+' '+(Number(m[1])+543);
-}
-function vehicleLabel_(name,vehRows){
-  name=String(name||'').trim();if(!name)return '';
-  var plateCols=['ทะเบียน','เลขทะเบียน','ป้ายทะเบียน','เลขทะเบียนรถ','plate','Plate'];
-  for(var i=0;i<vehRows.length;i++){
-    if(String(vehRows[i]['ชื่อรถ']||'').trim()!==name)continue;
-    for(var j=0;j<plateCols.length;j++){var p=String(vehRows[i][plateCols[j]]||'').trim();if(p&&name.indexOf(p)<0)return name+' '+p;}
-  }
-  return name;
-}
-function reportDriverName_(r){
-  // กติกาเดียวกับใบอนุญาต: ต้องการคนขับ -> คนขับที่ Admin จัดสรร / ไม่ต้องการ -> ชื่อที่ผู้ขอระบุ
-  return String(r.needDriver||'').trim()==='ต้องการ'?String(r.driver||'').trim():String(r.requestedDriver||'').trim();
-}
-function buildDailyReport_(dateKey){
-  // รายงานเฉพาะคำขอที่ อนุมัติ/จัดรถแล้ว + มีรถที่จัด + มีผู้ขับรถ (ข้อมูลไม่ครบ -> ไม่รายงาน แต่แจ้งเตือนใน warnings)
-  var vehRows=rowsToObjects_(sheet_(SHEETS.VEHICLES));
-  var cand=rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).filter(function(r){
-    return r.dateGo===dateKey&&DAILY_REPORT_STATUSES_.indexOf(r.status)>=0;
-  }).sort(function(a,b){return String(a.timeGo).localeCompare(String(b.timeGo));});
-  var warnings=[],blocks=[],skipped=0;
-  cand.forEach(function(r){
-    var vlist=String(r.vehicles||'').split(',').map(function(x){return vehicleLabel_(x,vehRows);}).filter(Boolean);
-    var drv=reportDriverName_(r),who=r.name+' ('+(r.timeGo||'-')+' น.)',why=[];
-    if(!vlist.length)why.push('ยังไม่ได้จัดรถ');
-    if(!drv)why.push('ยังไม่มีผู้ขับรถ');
-    if(why.length){skipped++;warnings.push('ไม่นำไปรายงาน — '+who+': '+why.join(' / '));return;}
-    var total=(Number(r.students)||0)+(Number(r.teachers)||0)+(Number(r.others)||0);if(total<=0)total=Number(r.companionCount)||0;
-    if(!total)warnings.push(who+': ไม่ระบุจำนวนผู้ร่วมเดินทาง (รายงานเป็น 0 คน)');
-    var purpose=String(r.purpose||'').trim(),dest=String(r.destination||'').trim();
-    var what=purpose+((dest&&purpose.indexOf(dest)<0)?' ณ '+dest:'');
-    var lines=['เวลา '+(r.timeGo||'-')+' น.'];
-    vlist.forEach(function(v){lines.push('🚐'+v);});
-    lines.push('🙎🏻ผู้ขับรถ  '+drv);
-    lines.push('');lines.push('-'+what);lines.push('ผู้ร่วมเดินทาง '+total+' คน');
-    blocks.push(lines.join('\n'));
-  });
-  var text=blocks.length?('แจ้งการใช้รถโรงเรียน\n'+thaiLongDate_(dateKey)+'\n\n'+blocks.join('\n\n')+'\n\n🙏🏻ขอบคุณครับ🙏🏻'):'';
-  return {dateKey:dateKey,dateText:thaiLongDate_(dateKey),count:blocks.length,skippedCount:skipped,warnings:warnings,text:text};
-}
-function lineConfigured_(){var p=PropertiesService.getScriptProperties();return !!(p.getProperty(LINE_TOKEN_PROP_)&&p.getProperty(LINE_GROUP_PROP_));}
-function autoTriggerOn_(){try{return ScriptApp.getProjectTriggers().some(function(t){return t.getHandlerFunction()==='dailyLineReportJob';});}catch(e){return null;}}
-// อ่านอย่างเดียว: สร้างข้อความรายงานของวันที่ระบุ (ไม่ส่ง ไม่เขียนชีต)
-function getDailyReport(dateKey,adminToken){
-  requireAdminSession_(adminToken);
-  dateKey=String(dateKey||'').trim()||todayKey_();
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(dateKey))throw new Error('รูปแบบวันที่ไม่ถูกต้อง');
-  var rep=buildDailyReport_(dateKey);rep.lineConfigured=lineConfigured_();rep.autoTrigger=autoTriggerOn_();
-  return rep;
-}
-function sendLineText_(text){
-  var p=PropertiesService.getScriptProperties(),token=p.getProperty(LINE_TOKEN_PROP_),to=p.getProperty(LINE_GROUP_PROP_);
-  if(!token||!to)throw new Error('ยังไม่ได้ตั้งค่า LINE (Script properties: '+LINE_TOKEN_PROP_+' และ '+LINE_GROUP_PROP_+')');
-  var chunks=[],cur='';
-  String(text).split('\n\n').forEach(function(part){if((cur+'\n\n'+part).length>4800&&cur){chunks.push(cur);cur=part;}else cur=cur?cur+'\n\n'+part:part;});
-  if(cur)chunks.push(cur);
-  chunks.forEach(function(c){
-    var res=UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push',{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+token},payload:JSON.stringify({to:to,messages:[{type:'text',text:c}]}),muteHttpExceptions:true});
-    var code=res.getResponseCode();
-    if(code!==200)throw new Error('LINE ตอบกลับ '+code+': '+String(res.getContentText()||'').slice(0,200));
-  });
-}
-// Admin กดส่งเอง (ส่งข้อความที่แก้ไขแล้วในช่องได้; ถ้าว่างใช้ข้อความที่ระบบสร้าง)
-function sendDailyReportToLine(dateKey,text,adminToken){
-  var admin=requireAdminSession_(adminToken);
-  dateKey=String(dateKey||'').trim()||todayKey_();
-  text=String(text||'').trim()||buildDailyReport_(dateKey).text;
-  if(!text)throw new Error('ไม่มีรายการใช้รถที่อนุมัติแล้วในวันที่เลือก จึงไม่ส่งข้อความ');
-  sendLineText_(text);
-  appendAuditLog_('DAILY_REPORT_SENT','',admin.account,'','','',{type:'DAILY_REPORT_SENT',date:dateKey,length:text.length});
-  return {ok:true};
-}
-// ฟังก์ชันที่ Trigger เรียกทุกเช้า: ส่งเฉพาะเมื่อมีรายการ และไม่ส่งซ้ำในวันเดียวกัน
-function dailyLineReportJob(){
-  var key=todayKey_(),props=PropertiesService.getScriptProperties();
-  if(props.getProperty(LINE_LASTSENT_PROP_)===key)return;
-  var rep=buildDailyReport_(key);
-  if(!rep.count)return;
-  sendLineText_(rep.text);
-  props.setProperty(LINE_LASTSENT_PROP_,key);
-  try{appendAuditLog_('DAILY_REPORT_AUTO','','system','','','',{type:'DAILY_REPORT_AUTO',date:key,trips:rep.count});}catch(e){}
-}
-// เจ้าของระบบรันครั้งเดียวจาก Apps Script Editor: ตั้งเวลาส่งอัตโนมัติ ~05:30 น. ทุกวัน (คลาดเคลื่อนได้ ±15 นาที)
-function installDailyLineTrigger(){
-  removeDailyLineTrigger();
-  ScriptApp.newTrigger('dailyLineReportJob').timeBased().atHour(5).nearMinute(30).everyDays(1).inTimezone('Asia/Bangkok').create();
-  return 'ตั้งเวลาส่งอัตโนมัติแล้ว (ประมาณ 05:30 น. ทุกวัน)';
-}
-function removeDailyLineTrigger(){
-  ScriptApp.getProjectTriggers().forEach(function(t){if(t.getHandlerFunction()==='dailyLineReportJob')ScriptApp.deleteTrigger(t);});
-  return 'ยกเลิกการส่งอัตโนมัติแล้ว';
-}
-// รันครั้งเดียวจาก Editor เพื่ออนุมัติสิทธิ์ใหม่ (UrlFetch + Trigger) ก่อน Deploy เป็นเวอร์ชันใหม่ — ไม่ส่งข้อความใดๆ
-function authorizeLineReport(){
-  var r=UrlFetchApp.fetch('https://api.line.me/v2/bot/info',{muteHttpExceptions:true});
-  return 'อนุมัติสิทธิ์แล้ว (LINE ตอบ '+r.getResponseCode()+' เป็นเรื่องปกติหากยังไม่ได้ตั้งค่า token) triggers='+ScriptApp.getProjectTriggers().length;
-}
 function getVehicles(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.VEHICLES));}
 function getDrivers(adminToken){requireAdminSession_(adminToken);return getDriverNames_().map(function(n){return {name:n};});}
 function getDriverNames_(){
@@ -290,11 +149,10 @@ function getBookingsForMonth(year,month){
     status:String(r['สถานะ']||STATUS.PENDING),
     vehicles:String(r['รถที่จัด']||''),
     driver:String(r[DRIVER_COL_]||''),
-    requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),
     note:String(r['หมายเหตุ']||'')
   };});
 }
-function getAllRequests(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).sort(function(a,b){return a.dateGo<b.dateGo?1:a.dateGo>b.dateGo?-1:0;});}
+function getAllRequests(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(function(r){return {id:String(r.id||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||'')};}).sort(function(a,b){return a.dateGo<b.dateGo?1:a.dateGo>b.dateGo?-1:0;});}
 
 function saveRequest(data,sessionToken){
   data=data||{};
@@ -310,29 +168,17 @@ function saveRequest(data,sessionToken){
   data.purpose=String(data.purpose||'').trim().slice(0,500);
   data.companionNames=String(data.companionNames||'').trim().slice(0,2000);
   data.note=String(data.note||'').trim().slice(0,1000);
-  data.requestedDriver=String(data.requestedDriver||'').trim().slice(0,120);
-  data.requesterPhone=cleanPhone_(data.requesterPhone);
-  var needDriverFlag=(data.needDriver===true||data.needDriver==='1'||data.needDriver==='ต้องการ');
-  if(needDriverFlag)data.requestedDriver=''; // ขอคนขับจากโรงเรียน: ไม่เก็บชื่อที่ผู้ขอระบุ (Admin จัดสรรเองในคอลัมน์ DRIVER_COL_)
   if(adminSession)data.recordedBy=adminSession.account;else data.recordedBy='ส่งผ่านแบบฟอร์มสาธารณะ';
   if(!data.name||!data.destination||!data.purpose||!String(data.dateGo||'').trim()||!String(data.timeGo||'').trim()) throw new Error('กรุณากรอกชื่อ ปลายทาง วัตถุประสงค์ วันที่ไป และเวลาไป');
-  if(!needDriverFlag&&!data.requestedDriver)throw new Error('กรณีไม่ต้องการคนขับจากโรงเรียน กรุณาระบุชื่อผู้ขับรถ');
-  var phoneDigits=data.requesterPhone.replace(/\D/g,'');
-  if(!adminSession&&!phoneDigits)throw new Error('กรุณากรอกเบอร์โทรศัพท์ผู้ขอใช้รถ');
-  if(phoneDigits&&(phoneDigits.length<9||phoneDigits.length>15))throw new Error('เบอร์โทรศัพท์ไม่ถูกต้อง');
   if(data.dateBack && String(data.dateBack)<String(data.dateGo)) throw new Error('วันที่กลับต้องไม่อยู่ก่อนวันที่เดินทางไป');
   if(!/^\d{4}-\d{2}-\d{2}$/.test(String(data.dateGo))||!/^\d{2}:\d{2}$/.test(String(data.timeGo)))throw new Error('รูปแบบวันที่หรือเวลาไม่ถูกต้อง');
   if(data.dateBack&&!/^\d{4}-\d{2}-\d{2}$/.test(String(data.dateBack)))throw new Error('รูปแบบวันที่กลับไม่ถูกต้อง');
   if(data.timeBack&&!/^\d{2}:\d{2}$/.test(String(data.timeBack)))throw new Error('รูปแบบเวลากลับไม่ถูกต้อง');
   var lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
-    var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);
-    var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],row=new Array(headers.length).fill(''),id='R'+new Date().getTime()+'-'+Utilities.getUuid().substring(0,6).toUpperCase();
+    var sh=sheet_(SHEETS.REQUESTS),headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],row=new Array(headers.length).fill(''),id='R'+new Date().getTime()+'-'+Utilities.getUuid().substring(0,6).toUpperCase();
     var map={id:id,timestamp:new Date(),'รหัสบุคลากร':data.staffId||'','ชื่อ-นามสกุล':data.name,'ตำแหน่ง':data.position,'สังกัด':data.department,'ปลายทาง':data.destination,'วัตถุประสงค์':data.purpose,'วันที่ไป':data.dateGo,'เวลาไป':data.timeGo,'วันที่กลับ':data.dateBack||'','เวลากลับ':data.timeBack||'','ต้องการคนขับ':data.needDriver===true||data.needDriver==='1'||data.needDriver==='ต้องการ'?'ต้องการ':'ไม่ต้องการ','จำนวนผู้ร่วมเดินทาง':Number(data.companionCount)||0,'รายชื่อผู้ร่วมเดินทาง':data.companionNames||'','ทริปใหญ่':'','จำนวนนักเรียน':Number(data.students)||0,'จำนวนครู':Number(data.teachers)||0,'จำนวนอื่นๆ':Number(data.others)||0,'สถานะ':STATUS.PENDING,'รถที่จัด':'','ผู้บันทึก':data.recordedBy||'','หมายเหตุ':data.note||''};
-    map[REQ_DRIVER_NAME_COL_]=data.requestedDriver;map[REQ_PHONE_COL_]=data.requesterPhone;
     headers.forEach(function(h,i){if(Object.prototype.hasOwnProperty.call(map,h))row[i]=map[h];});sh.appendRow(row);
-    var phoneIdx=headers.indexOf(REQ_PHONE_COL_);
-    if(phoneIdx>=0&&data.requesterPhone)sh.getRange(sh.getLastRow(),phoneIdx+1).setNumberFormat('@').setValue(data.requesterPhone); // บังคับเป็นข้อความ เลข 0 นำหน้าไม่หาย
     appendAuditLog_(adminSession?'CREATE_BY_ADMIN':'PUBLIC_BOOKING_SUBMITTED',id,data.recordedBy,'',STATUS.PENDING,'',{type:adminSession?'CREATE_BY_ADMIN':'PUBLIC_BOOKING_SUBMITTED',requestId:id,submittedName:data.name,destination:data.destination});
     return {id:id,ok:true};
   }finally{lock.releaseLock();}
