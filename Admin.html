@@ -880,6 +880,97 @@ body.light .dashboard-action-link.action-edit{background:#1769aa}
 @media(max-width:760px){.dashboard-toolbar{align-items:flex-start}.dashboard-toolbar-actions{width:100%}.dashboard-toolbar-actions .btn{flex:1 1 auto}.dashboard-layout{grid-template-columns:minmax(0,1fr)}.dashboard-panel-left,.dashboard-panel-center,.dashboard-panel-right{grid-column:auto}.dashboard-panel-right .dashboard-panel-body{display:block}.dashboard-kpis{gap:8px}.dashboard-kpi{padding:12px;gap:9px}.kpi-icon{width:36px;height:36px;font-size:20px}.kpi-value{font-size:23px}.kpi-label{font-size:12px}.kpi-foot{font-size:10px}.dashboard-panel-body{padding:11px}.dashboard-day{min-height:40px}.dashboard-request-meta .request-detail-line{grid-template-columns:1fr 1fr}}
 @media(max-width:390px){.dashboard-kpis{grid-template-columns:1fr 1fr}.dashboard-kpi{padding:10px 8px}.kpi-icon{width:31px;height:31px}.kpi-value{font-size:21px}.dashboard-toolbar-title{font-size:21px}}
 
+
+/* ===== V2.1.0 Command Center redesign · reference-led layout ===== */
+body{background:var(--bg);min-height:100vh}
+.wrap{max-width:none;width:auto;margin:0 0 0 220px;padding:0 22px 28px;min-height:100vh}
+.head-row{position:fixed;z-index:1000;left:0;top:0;bottom:auto;width:220px;height:214px;margin:0;padding:22px 15px;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#0d2d50;border:0;border-radius:0;color:#fff;box-shadow:none}
+.brand-wrap{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;text-align:center;width:100%}
+.brand-logo{width:94px;height:78px;object-fit:contain;border-radius:0;background:transparent}
+.head-row h1{font:700 25px 'Prompt',sans-serif!important;color:#fff!important;margin:0!important;text-align:center}
+.head-row .sub{font-size:12px;color:#d8e8f8;text-align:center}
+.top-user{position:absolute;left:14px;right:14px;bottom:10px;justify-content:center;font-size:11px}
+.tabs{position:fixed;z-index:999;left:0;top:214px;bottom:0;width:220px;margin:0;padding:12px 0 20px;display:flex;flex-direction:column;align-items:stretch;gap:2px;overflow-y:auto;background:#0d2d50;border:0;border-radius:0}
+.tab{width:100%;text-align:left;padding:13px 20px;border:0;border-left:4px solid transparent;border-radius:0;color:#dce9f6;font-size:14px;font-weight:500;white-space:nowrap}
+.tab:hover{background:rgba(255,255,255,.08);color:#fff}
+.tab.active{background:#1476d4;color:#fff;border-left-color:#63c5ff}
+.view{min-width:0}
+#v-dashboard{padding-top:18px}
+.dashboard-toolbar{min-height:68px;padding:4px 2px 14px;border-bottom:1px solid var(--line);margin:0 0 16px}
+.dashboard-toolbar-title{font:700 clamp(22px,2.1vw,29px) 'Prompt',sans-serif;color:var(--ink)}
+.dashboard-toolbar-actions{gap:10px}
+.dashboard-live-meta{display:flex;align-items:center;gap:15px;color:var(--dim);font-size:13px;margin-right:8px}
+.dashboard-online{display:inline-flex;align-items:center;gap:6px}.dashboard-online i{width:8px;height:8px;border-radius:50%;background:#16a56a;display:inline-block}
+.dashboard-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.dashboard-kpi{min-height:116px;border:0;border-radius:9px;padding:18px;color:#fff;box-shadow:0 5px 16px rgba(0,0,0,.12)}
+.dashboard-kpi .kpi-value,.dashboard-kpi .kpi-label,.dashboard-kpi .kpi-foot{color:#fff}
+.dashboard-kpi .kpi-value{font-size:32px}.dashboard-kpi .kpi-label{font-size:14px}.dashboard-kpi .kpi-foot{opacity:.82}
+.dashboard-kpi .kpi-icon{width:54px;height:54px;background:rgba(255,255,255,.18);color:#fff;border-radius:50%;font-size:25px}
+.kpi-blue{background:linear-gradient(130deg,#1687ef,#0758c8)}.kpi-green{background:linear-gradient(130deg,#18b96d,#07884e)}.kpi-amber{background:linear-gradient(130deg,#ffc04c,#ed9414)}.kpi-red{background:linear-gradient(130deg,#f34b60,#d51f3d)}
+.command-grid{display:grid;gap:16px;align-items:stretch;margin-bottom:16px}
+.command-main{grid-template-columns:minmax(0,1.35fr) minmax(340px,.95fr)}
+.command-insights{grid-template-columns:minmax(0,1.35fr) minmax(250px,.9fr) minmax(260px,.95fr)}
+.command-details{grid-template-columns:minmax(240px,.85fr) minmax(0,1.35fr) minmax(240px,.8fr);margin-top:16px}
+.dashboard-panel{border:1px solid var(--line);border-radius:9px;background:var(--panel);box-shadow:0 4px 16px rgba(15,35,55,.08);overflow:hidden;min-width:0}
+.dashboard-panel-head{background:#12365f;color:#fff;border:0;padding:13px 16px;min-height:57px}
+.dashboard-panel-title{font:600 15px 'Prompt','IBM Plex Sans Thai',sans-serif;color:#fff}
+.dashboard-panel-caption{font-size:11px;color:#d2e1f1}
+.dashboard-count{background:rgba(255,255,255,.18);color:#fff}
+.count-danger{background:#e83d50;color:#fff}
+.dashboard-panel-body{padding:14px}
+.dashboard-table-wrap{width:100%;overflow-x:auto}
+.dashboard-table{width:100%;border-collapse:collapse;font-size:13px;min-width:570px}
+.dashboard-table th{background:var(--panel2);color:var(--dim);font-weight:600;text-align:left;padding:11px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dashboard-table td{padding:11px 9px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink)}
+.dashboard-table tbody tr:last-child td{border-bottom:0}
+.dashboard-table .dashboard-empty{text-align:center}
+.dashboard-panel-footer{display:flex;justify-content:flex-end;padding:8px 2px 0}
+.dashboard-text-action{border:0;background:transparent;color:#1685db;font:600 12px inherit;cursor:pointer}
+.dashboard-actions-body{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.action-group{min-width:0}.action-group .dashboard-section-label{margin-top:0;font-size:12px;font-weight:700;color:var(--ink)}
+.action-group .dashboard-request{padding:9px;margin-bottom:7px}
+.action-group .dashboard-request-meta{font-size:11px}
+.action-group .dashboard-doc{padding:9px;margin-bottom:7px;border-radius:7px;font-size:11px}
+.action-group .dd-actions button{font-size:10px;padding:4px 6px}
+.monthly-chart{height:190px;display:flex;align-items:flex-end;justify-content:space-around;gap:12px;padding:16px 8px 0;border-bottom:1px solid var(--line)}
+.month-bar{height:100%;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;min-width:0}
+.month-bar-track{height:142px;width:min(44px,72%);display:flex;align-items:flex-end;background:var(--panel2);border-radius:7px 7px 0 0;overflow:hidden}
+.month-bar-fill{width:100%;background:linear-gradient(180deg,#52baf2,#0869c8);border-radius:7px 7px 0 0;min-height:3px}
+.month-bar strong{font-size:12px;color:var(--ink)}.month-bar small{font-size:11px;color:var(--dim);white-space:nowrap}
+.health-layout{display:flex;align-items:center;justify-content:center;gap:17px;min-height:180px}
+.health-donut{width:145px;height:145px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#12a66a 0 75%,#f2a51a 75% 90%,#df354c 90% 100%);position:relative;flex:none}
+.health-donut:before{content:'';position:absolute;inset:15px;background:var(--panel);border-radius:50%}
+.health-donut span{z-index:1;text-align:center;display:flex;flex-direction:column}.health-donut b{font:700 24px 'Prompt',sans-serif;color:var(--ink)}.health-donut small{font-size:10px;color:var(--dim)}
+.health-legend{display:grid;gap:12px;font-size:12px;color:var(--ink)}
+.health-legend span{display:flex;align-items:center;gap:7px}.health-legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.document-status{display:grid;gap:14px;padding:7px 2px}
+.document-row{display:grid;grid-template-columns:minmax(70px,.8fr) minmax(60px,1.4fr) auto;align-items:center;gap:8px;font-size:11px;color:var(--ink)}
+.document-track{height:9px;background:var(--panel2);border-radius:10px;overflow:hidden}.document-fill{height:100%;border-radius:10px;background:#159c68}
+.document-row strong{font-size:11px;text-align:right}
+.quick-panel{margin-bottom:12px}
+.quick-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+.quick-action{border:0;border-radius:9px;padding:13px 12px;min-height:83px;color:#fff;display:grid;grid-template-columns:38px 1fr;grid-template-rows:auto auto;column-gap:9px;text-align:left;align-items:center;cursor:pointer}
+.quick-action>span{grid-row:1/3;font-size:26px;text-align:center}.quick-action b{font-size:13px}.quick-action small{font-size:10px;opacity:.85}
+.quick-blue{background:linear-gradient(120deg,#1687ef,#0758c8)}.quick-green{background:linear-gradient(120deg,#18b96d,#07884e)}.quick-violet{background:linear-gradient(120deg,#8953db,#6032ba)}.quick-amber{background:linear-gradient(120deg,#ffbb42,#e88b12)}
+.recommendation-panel{display:flex;align-items:center;gap:14px;padding:15px 18px;background:linear-gradient(100deg,#fff1c9,#f5f8fb);color:#263449}
+.recommendation-icon{font-size:27px}.recommendation-panel b{font:600 15px 'Prompt',sans-serif}.recommendation-panel p{margin:4px 0 0;font-size:12px;line-height:1.6}
+.dashboard-calendar-controls{display:flex;gap:5px}
+.dashboard-months{grid-template-columns:1fr;gap:12px}
+.dashboard-request{border-radius:8px}
+.dashboard-section-label{font-weight:600}
+.dashboard-empty{font-size:12px}
+body.light{--bg:#edf3f9;--panel:#fff;--panel2:#f3f6fa;--panel3:#e8eef5;--ink:#15243a;--dim:#66768b;--line:#dce4ed}
+body.light .dashboard-panel{box-shadow:0 4px 16px rgba(15,35,55,.07)}
+body.light .recommendation-panel{background:linear-gradient(100deg,#fff1c9,#f5f8fb)}
+body:not(.light){--bg:#0c1726;--panel:#14243a;--panel2:#1b304a;--panel3:#243c57;--ink:#e8f0fa;--dim:#a9bad0;--line:#2a4059}
+body:not(.light) .recommendation-panel{background:linear-gradient(100deg,#3b3422,#17283b);color:#f2e8cf}
+body:not(.light) .recommendation-panel p{color:#d9dfeb}
+body:not(.light) .document-track{background:#263d56}
+@media(max-width:1250px){.command-insights{grid-template-columns:1fr 1fr}.command-insights>.dashboard-panel:first-child{grid-column:1/-1}.command-details{grid-template-columns:1fr 1fr}.command-details>.dashboard-panel:last-child{grid-column:1/-1}}
+@media(max-width:1050px){.command-main{grid-template-columns:1fr}.dashboard-actions-body{grid-template-columns:1fr 1fr}.dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.command-insights{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.wrap{margin:0;padding:0 12px 24px}.head-row{position:relative;width:auto;height:auto;min-height:76px;padding:10px 14px;flex-direction:row;justify-content:flex-start}.brand-wrap{flex-direction:row;justify-content:flex-start;text-align:left}.brand-logo{width:48px;height:48px}.head-row h1{font-size:17px!important}.head-row .sub{display:none}.top-user{position:static;margin-left:auto}.tabs{position:relative;top:auto;bottom:auto;width:auto;flex-direction:row;overflow-x:auto;padding:5px;margin:0 -12px 8px}.tab{width:auto;flex:0 0 auto;padding:10px 13px;border-left:0;border-bottom:3px solid transparent;font-size:12px}.tab.active{border-bottom-color:#63c5ff}.dashboard-toolbar{padding-top:12px}.dashboard-toolbar-actions{width:100%}.dashboard-live-meta{margin-right:auto}.command-insights,.command-details{grid-template-columns:1fr}.command-insights>.dashboard-panel:first-child,.command-details>.dashboard-panel:last-child{grid-column:auto}.quick-actions{grid-template-columns:1fr 1fr}.dashboard-actions-body{grid-template-columns:1fr}.recommendation-panel{align-items:flex-start}}
+@media(max-width:430px){.dashboard-kpis{gap:8px}.dashboard-kpi{padding:12px 10px;min-height:100px;gap:9px}.dashboard-kpi .kpi-icon{width:36px;height:36px;font-size:18px}.dashboard-kpi .kpi-value{font-size:24px}.quick-actions{gap:8px}.quick-action{padding:10px 8px;grid-template-columns:30px 1fr}.command-grid{gap:11px}}
+
 </style>
 </head>
 <body>
@@ -935,49 +1026,75 @@ body.light .dashboard-action-link.action-edit{background:#1769aa}
         <div class="section-sub" style="margin:4px 0 0;">ศูนย์บัญชาการบริหารจัดการยานพาหนะ</div>
       </div>
       <div class="dashboard-toolbar-actions">
-        <button type="button" class="btn secondary small" id="dashboardPrevMonth" aria-label="เดือนก่อนหน้า">‹</button>
-        <button type="button" class="btn secondary small" id="dashboardToday">วันนี้</button>
-        <button type="button" class="btn secondary small" id="dashboardNextMonth" aria-label="เดือนถัดไป">›</button>
-        <button type="button" class="btn small" id="dashboardNewRequest">＋ คำขอใหม่</button>
+        <div class="dashboard-live-meta"><span id="dashboardClock">--:-- น.</span><span class="dashboard-online"><i></i> ออนไลน์</span></div>
         <button type="button" class="btn secondary small" id="dashboardRefresh">↻ รีเฟรช</button>
         <button type="button" class="btn secondary small theme-switch" id="dashboardTheme" aria-label="สลับธีม">☀ Light mode</button>
       </div>
     </div>
-    <section class="dashboard-kpis" aria-label="สรุปสถานะการใช้รถ">
-      <article class="dashboard-kpi kpi-blue"><div class="kpi-icon">▣</div><div><div class="kpi-value" id="dashboardKpiTotal">0</div><div class="kpi-label">รายการใช้งานที่ยัง active</div><div class="kpi-foot">ภาพรวมคำขอใช้รถ</div></div></article>
-      <article class="dashboard-kpi kpi-green"><div class="kpi-icon">✓</div><div><div class="kpi-value" id="dashboardKpiToday">0</div><div class="kpi-label">รายการใช้รถวันนี้</div><div class="kpi-foot">ตามวันที่ปัจจุบัน</div></div></article>
-      <article class="dashboard-kpi kpi-amber"><div class="kpi-icon">◷</div><div><div class="kpi-value" id="dashboardKpiPending">0</div><div class="kpi-label">รอการดำเนินการ</div><div class="kpi-foot">ต้องตรวจสอบและจัดการ</div></div></article>
-      <article class="dashboard-kpi kpi-violet"><div class="kpi-icon">⇢</div><div><div class="kpi-value" id="dashboardKpiMulti">0</div><div class="kpi-label">การจองหลายวัน</div><div class="kpi-foot">รถที่ถูกจัดต่อเนื่อง</div></div></article>
+    <section class="dashboard-kpis" aria-label="ภาพรวมสถานะรถ">
+      <article class="dashboard-kpi kpi-blue"><div class="kpi-icon">🚘</div><div><div class="kpi-value" id="dashboardFleetTotal">0</div><div class="kpi-label">รถทั้งหมด</div><div class="kpi-foot">ยานพาหนะในระบบ</div></div></article>
+      <article class="dashboard-kpi kpi-green"><div class="kpi-icon">✓</div><div><div class="kpi-value" id="dashboardFleetReady">0</div><div class="kpi-label">พร้อมใช้งาน</div><div class="kpi-foot" id="dashboardFleetReadyPct">กำลังประมวลผล</div></div></article>
+      <article class="dashboard-kpi kpi-amber"><div class="kpi-icon">🔧</div><div><div class="kpi-value" id="dashboardFleetMaint">0</div><div class="kpi-label">ซ่อมบำรุง / เฝ้าระวัง</div><div class="kpi-foot">รายการจากระบบบำรุงรักษา</div></div></article>
+      <article class="dashboard-kpi kpi-red"><div class="kpi-icon">!</div><div><div class="kpi-value" id="dashboardFleetUnavailable">0</div><div class="kpi-label">ไม่พร้อมใช้</div><div class="kpi-foot">รถที่มีความพร้อมต่ำ</div></div></article>
     </section>
-    <div class="dashboard-layout">
-      <section class="dashboard-panel dashboard-panel-left">
-        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">ปฏิทินการใช้รถ</div><div class="dashboard-panel-caption">เลือกวันที่เพื่อดูรายละเอียด</div></div><span class="dashboard-count" id="dashboardBookingCount">0</span></div>
+    <div class="command-grid command-main">
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">▦ การใช้งานรถวันนี้</div><div class="dashboard-panel-caption">รายการเดินรถและสถานะล่าสุด</div></div><span class="dashboard-count" id="dashboardTodayCount">0</span></div>
         <div class="dashboard-panel-body">
-          <div class="dashboard-months" id="dashboardMonths"></div>
-          <div class="dashboard-legend"><span class="legend-dot"></span> มีคำขอใช้รถ <span class="legend-dot legend-doc"></span> มีเอกสารครบกำหนด</div>
-          <div class="dashboard-section-label">⚠️ การใช้รถซ้ำซ้อน</div>
-          <div id="dashboardConflicts"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div>
+          <div class="dashboard-table-wrap"><table class="dashboard-table"><thead><tr><th>เวลา</th><th>รถ / ทะเบียน</th><th>ผู้ขอใช้</th><th>ปลายทาง</th><th>สถานะ</th></tr></thead><tbody id="dashboardTodayTable"><tr><td colspan="5" class="dashboard-empty">กำลังโหลดข้อมูล...</td></tr></tbody></table></div>
+          <div class="dashboard-panel-footer"><button type="button" class="dashboard-text-action" data-dashboard-tab="calendar">ดูปฏิทินทั้งหมด →</button></div>
         </div>
       </section>
-      <section class="dashboard-panel dashboard-panel-center">
-        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">รายการใช้รถตามวันที่เลือก</div><div class="dashboard-panel-caption">รายละเอียดและการดำเนินการ</div></div><span class="dashboard-count" id="dashboardSelectedCount">0</span></div>
-        <div class="dashboard-panel-body">
-          <div class="dashboard-detail-date" id="dashboardSelectedDate">-</div>
-          <div id="dashboardSelectedDocs"></div>
-          <div id="dashboardSelectedRequests"><div class="dashboard-empty">กำลังโหลดรายการ...</div></div>
-        </div>
-      </section>
-      <section class="dashboard-panel dashboard-panel-right">
-        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">รายการที่ต้องดำเนินการ</div><div class="dashboard-panel-caption">งานสำคัญที่ต้องติดตาม</div></div><span class="dashboard-count" id="dashboardPendingCount">0</span></div>
-        <div class="dashboard-panel-body">
-          <div><div class="dashboard-section-label">📄 เอกสารรถใกล้หมดอายุ (ภายใน <span id="dashboardDocWindow">30</span> วัน)</div><div id="dashboardDocAlerts"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
-          <div><div class="dashboard-section-label">🔧 แจ้งเตือนการซ่อมบำรุง</div><div id="dashboardMaintAlerts"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
-          <div><div class="dashboard-section-label">คำขอใหม่ / รออนุมัติ</div><div id="dashboardPending"><div class="dashboard-empty">กำลังโหลดรายการ...</div></div></div>
-          <div><div class="dashboard-section-label">รถที่จองต่อเนื่องหลายวัน</div><div id="dashboardMultiDay"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">♟ รายการที่ต้องดำเนินการ</div><div class="dashboard-panel-caption">งานสำคัญที่ต้องติดตาม</div></div><span class="dashboard-count count-danger" id="dashboardPendingCount">0</span></div>
+        <div class="dashboard-panel-body dashboard-actions-body">
+          <div class="action-group"><div class="dashboard-section-label">✓ คำขอใหม่ / รออนุมัติ</div><div id="dashboardPending"><div class="dashboard-empty">กำลังโหลดรายการ...</div></div></div>
+          <div class="action-group"><div class="dashboard-section-label">🔧 รถและงานซ่อมบำรุง</div><div id="dashboardMaintAlerts"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
+          <div class="action-group"><div class="dashboard-section-label">▤ เอกสารรถใกล้หมดอายุ · <span id="dashboardDocWindow">30</span> วัน</div><div id="dashboardDocAlerts"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
+          <div class="action-group"><div class="dashboard-section-label">รถที่จองต่อเนื่องหลายวัน</div><div id="dashboardMultiDay"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
         </div>
       </section>
     </div>
-  </div>
+    <div class="command-grid command-insights">
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">▥ สรุปการใช้งานรถรายเดือน</div><div class="dashboard-panel-caption">จำนวนคำขอใช้รถย้อนหลัง 6 เดือน</div></div></div>
+        <div class="dashboard-panel-body"><div id="dashboardMonthlyChart" class="monthly-chart"><div class="dashboard-empty">กำลังประมวลผล...</div></div></div>
+      </section>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">🔧 สถานะสุขภาพรถ · Fleet Health</div><div class="dashboard-panel-caption">ภาพรวมความพร้อมของยานพาหนะ</div></div></div>
+        <div class="dashboard-panel-body"><div class="health-layout"><div id="dashboardHealthDonut" class="health-donut"><span><b id="dashboardHealthPct">—</b><small>พร้อมใช้งาน</small></span></div><div id="dashboardHealthLegend" class="health-legend"></div></div></div>
+      </section>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">▤ สถานะเอกสารสำคัญ</div><div class="dashboard-panel-caption">ติดตามเอกสารประจำรถในระบบ</div></div></div>
+        <div class="dashboard-panel-body"><div id="dashboardDocumentStatus" class="document-status"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
+      </section>
+    </div>
+    <section class="dashboard-panel quick-panel">
+      <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">⚡ Quick Actions</div><div class="dashboard-panel-caption">ทางลัดสำหรับงานประจำวัน</div></div></div>
+      <div class="dashboard-panel-body quick-actions">
+        <button type="button" class="quick-action quick-blue" data-dashboard-tab="new"><span>🚘</span><b>ขอใช้รถใหม่</b><small>บันทึกคำขอใช้รถ</small></button>
+        <button type="button" class="quick-action quick-green" data-dashboard-tab="list"><span>☑</span><b>อนุมัติ / จัดรถ</b><small id="quickPendingCount">ตรวจสอบคำขอ</small></button>
+        <button type="button" class="quick-action quick-violet" data-dashboard-tab="calendar"><span>▦</span><b>จัดตารางวันนี้</b><small>ดูปฏิทินการใช้รถ</small></button>
+        <button type="button" class="quick-action quick-amber" data-dashboard-tab="maint"><span>🔧</span><b>แจ้งซ่อมบำรุง</b><small>บันทึกและติดตามงาน</small></button>
+      </div>
+    </section>
+    <section class="dashboard-panel recommendation-panel">
+      <div class="recommendation-icon">💡</div><div><b>คำแนะนำจากระบบ</b><p id="dashboardRecommendation">ระบบจะแสดงข้อควรดำเนินการเมื่อโหลดข้อมูลครบถ้วน</p></div>
+    </section>
+    <div class="command-grid command-details">
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">ปฏิทินการใช้รถ</div><div class="dashboard-panel-caption">เลือกวันที่เพื่อดูรายการจอง</div></div><div class="dashboard-calendar-controls"><button type="button" class="btn secondary small" id="dashboardPrevMonth">‹</button><button type="button" class="btn secondary small" id="dashboardToday">วันนี้</button><button type="button" class="btn secondary small" id="dashboardNextMonth">›</button></div></div>
+        <div class="dashboard-panel-body"><div class="dashboard-months" id="dashboardMonths"></div><div class="dashboard-legend"><span class="legend-dot"></span> มีคำขอใช้รถ <span class="legend-dot legend-doc"></span> เอกสารครบกำหนด</div></div>
+      </section>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">รายการใช้รถตามวันที่เลือก</div><div class="dashboard-panel-caption">รายละเอียดและการดำเนินการ</div></div><span class="dashboard-count" id="dashboardSelectedCount">0</span></div>
+        <div class="dashboard-panel-body"><div class="dashboard-detail-date" id="dashboardSelectedDate">-</div><div id="dashboardSelectedDocs"></div><div id="dashboardSelectedRequests"><div class="dashboard-empty">กำลังโหลดรายการ...</div></div></div>
+      </section>
+      <section class="dashboard-panel">
+        <div class="dashboard-panel-head"><div><div class="dashboard-panel-title">⚠️ การใช้รถซ้ำซ้อน</div><div class="dashboard-panel-caption">ตรวจสอบการจองรถทับช่วงเวลา</div></div></div>
+        <div class="dashboard-panel-body"><div id="dashboardConflicts"><div class="dashboard-empty">กำลังตรวจสอบ...</div></div></div>
+      </section>
+    </div>
   <div class="view" id="v-new">
     <div class="card">
       <div class="section-title">
@@ -2934,16 +3051,61 @@ function renderDashboard(){
   var active=requests.filter(function(r){return dashboardStatusActive(r);});
   var pending=requests.filter(function(r){return getDisplayStatus(r)==='รอดำเนินการ';});
   var todayKey=dateKey(new Date());
-  var todayItems=active.filter(function(r){return dateRangeContains(r,todayKey);});
+  var todayItems=active.filter(function(r){return dateRangeContains(r,todayKey);}).sort(function(a,b){return (requestStart(a)||0)-(requestStart(b)||0);});
   var multi=active.filter(function(r){return r.dateGo&&r.dateBack&&r.dateBack!==r.dateGo&&String(r.vehicles||'').trim();});
-  document.getElementById('dashboardKpiTotal').textContent=active.length;
-  document.getElementById('dashboardKpiToday').textContent=todayItems.length;
-  document.getElementById('dashboardKpiPending').textContent=pending.length;
-  document.getElementById('dashboardKpiMulti').textContent=multi.length;
+  var total=(vehicles||[]).length,busyNames={},maintNames={},unreadyNames={};
+  todayItems.forEach(function(r){String(r.vehicles||'').split(',').forEach(function(n){n=n.trim();if(n)busyNames[n]=true;});});
+  (maintAlerts||[]).concat(lowReady||[]).forEach(function(x){if(x.vehicle)maintNames[x.vehicle]=true;});
+  (lowReady||[]).forEach(function(x){if(Number(x.score)<50&&x.vehicle)unreadyNames[x.vehicle]=true;});
+  var busy=Object.keys(busyNames).length,maint=Object.keys(maintNames).length,unready=Object.keys(unreadyNames).length;
+  var ready=Math.max(0,total-busy-maint);
+  function put(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
+  put('dashboardFleetTotal',total);put('dashboardFleetReady',ready);put('dashboardFleetMaint',maint);put('dashboardFleetUnavailable',unready);
+  put('dashboardFleetReadyPct',total?Math.round(ready/total*100)+'% ของรถทั้งหมด':'ยังไม่มีข้อมูลรถ');
+  put('dashboardTodayCount',todayItems.length);put('dashboardPendingCount',pending.length+(docAlerts||[]).length+(maintAlerts||[]).length+(lowReady||[]).length);
+  put('quickPendingCount',pending.length+' รายการรอดำเนินการ');
+  var clock=document.getElementById('dashboardClock');if(clock)clock.textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.';
+  var table=document.getElementById('dashboardTodayTable');
+  if(table){
+    table.innerHTML=todayItems.length?todayItems.map(function(r){
+      var st=getDisplayStatus(r),vehicle=String(r.vehicles||'รอจัดรถ');
+      return '<tr><td><b>'+esc(r.timeGo||'-')+' – '+esc(r.timeBack||'-')+'</b></td><td>'+esc(vehicle)+'</td><td>'+esc(r.name||'-')+'</td><td>'+esc(r.destination||'-')+'</td><td>'+statusBadge(st)+'</td></tr>';
+    }).join(''):'<tr><td colspan="5" class="dashboard-empty">วันนี้ไม่มีรายการใช้รถ</td></tr>';
+  }
+  var chart=document.getElementById('dashboardMonthlyChart');
+  if(chart){
+    var now=new Date(),months=[];
+    for(var mi=5;mi>=0;mi--){var md=new Date(now.getFullYear(),now.getMonth()-mi,1),key=md.getFullYear()+'-'+String(md.getMonth()+1).padStart(2,'0');months.push({key:key,label:thaiMonths[md.getMonth()],count:requests.filter(function(r){return String(r.dateGo||'').slice(0,7)===key&&getDisplayStatus(r)!=='ยกเลิก'&&getDisplayStatus(r)!=='ปฏิเสธ';}).length});}
+    var max=Math.max.apply(null,months.map(function(x){return x.count;}))||1;
+    chart.innerHTML=months.map(function(x){return '<div class="month-bar"><strong>'+x.count+'</strong><div class="month-bar-track"><div class="month-bar-fill" style="height:'+Math.max(3,x.count/max*100)+'%"></div></div><small>'+esc(x.label)+'</small></div>';}).join('');
+  }
+  var donut=document.getElementById('dashboardHealthDonut'),legend=document.getElementById('dashboardHealthLegend');
+  if(donut&&legend){
+    var pct=total?Math.round(ready/total*100):0,readyEnd=total?ready/total*100:0,maintEnd=total?(ready+maint)/total*100:0;
+    donut.style.background='conic-gradient(#12a66a 0 '+readyEnd+'%,#f2a51a '+readyEnd+'% '+maintEnd+'%,#df354c '+maintEnd+'% 100%)';
+    put('dashboardHealthPct',total?pct+'%':'—');
+    legend.innerHTML='<span><i style="background:#12a66a"></i>พร้อมใช้งาน <b>'+ready+'</b> คัน</span><span><i style="background:#f2a51a"></i>ซ่อมบำรุง / เฝ้าระวัง <b>'+maint+'</b> คัน</span><span><i style="background:#df354c"></i>ไม่พร้อมใช้ <b>'+unready+'</b> คัน</span>';
+  }
+  var docs=document.getElementById('dashboardDocumentStatus');
+  if(docs){
+    var docTypes=(vdData&&vdData.types)||[],docVehicles=(vdData&&vdData.vehicles)||vehicles||[],alerts=docAlerts||[];
+    docs.innerHTML=docTypes.length?docTypes.map(function(type){
+      var totalDocs=docVehicles.length,alertCount=alerts.filter(function(a){return a.type===type;}).length,ok=Math.max(0,totalDocs-alertCount),percent=totalDocs?Math.round(ok/totalDocs*100):0;
+      return '<div class="document-row"><span>'+esc(type)+'</span><div class="document-track"><div class="document-fill" style="width:'+percent+'%"></div></div><strong>'+ok+'/'+totalDocs+' ('+percent+'%)</strong></div>';
+    }).join(''):'<div class="dashboard-empty">ยังไม่มีข้อมูลเอกสารรถ</div>';
+  }
+  var recommendation=document.getElementById('dashboardRecommendation');
+  if(recommendation){
+    if(pending.length)recommendation.textContent='มีคำขอใช้รถรออนุมัติ '+pending.length+' รายการ กรุณาตรวจสอบและจัดสรรรถก่อนเวลาเดินทาง';
+    else if((docAlerts||[]).length)recommendation.textContent='มีเอกสารรถใกล้หมดอายุหรือเลยกำหนด '+docAlerts.length+' รายการ ควรดำเนินการต่ออายุเพื่อให้รถพร้อมใช้งาน';
+    else if(maint>0)recommendation.textContent='มีรถที่อยู่ระหว่างติดตามงานซ่อมบำรุง '+maint+' คัน ควรตรวจสอบกำหนดการและสถานะล่าสุด';
+    else recommendation.textContent='ไม่พบงานเร่งด่วนจากข้อมูลที่โหลดในขณะนี้ ตรวจสอบตารางเดินรถและความพร้อมของรถตามรอบปกติ';
+  }
   dashboardRenderCalendar();dashboardRenderSelected();dashboardRenderPending();dashboardRenderMultiDay();dashboardRenderConflicts();
-  document.getElementById('dashboardBookingCount').textContent=active.length;
+  var count=document.getElementById('dashboardBookingCount');if(count)count.textContent=active.length;
 }
 dashboardInitTheme();
+document.querySelectorAll('[data-dashboard-tab]').forEach(function(btn){btn.addEventListener('click',function(){var tab=document.querySelector('.tab[data-v="'+btn.getAttribute('data-dashboard-tab')+'"]');if(tab)tab.click();});});
 ['dashboardPrevMonth','dashboardNextMonth','dashboardToday','dashboardRefresh','dashboardNewRequest','dashboardTheme'].forEach(function(id){var el=document.getElementById(id);if(!el)return;el.addEventListener('click',function(){if(id==='dashboardPrevMonth'){calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()-1,1);renderDashboard();}else if(id==='dashboardNextMonth'){calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()+1,1);renderDashboard();}else if(id==='dashboardToday'){var now=new Date();calendarDate=new Date(now.getFullYear(),now.getMonth(),1);dashboardSelectedKey=dateKey(now);renderDashboard();}else if(id==='dashboardRefresh'){loadRequests(function(){renderDashboard();});}else if(id==='dashboardNewRequest'){var tab=document.querySelector('.tab[data-v="new"]');if(tab)tab.click();}else if(id==='dashboardTheme'){dashboardSetTheme(document.body.classList.contains('light')?'dark':'light');}});});
 function showDayDetail(key){
   var detail =
