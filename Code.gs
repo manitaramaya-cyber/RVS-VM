@@ -253,8 +253,8 @@ function getFeedbackSummary(adminToken){
 var DOC_SHEET_NAME='VehicleDocs',DOC_HISTORY_SHEET_NAME='VehicleDocHistory';
 var DOC_ALERT_DAYS_=30; // แจ้งเตือนล่วงหน้า (วัน)
 var DOC_TYPES_=['พรบ.','ประกัน','ทะเบียน','ภาษี'];
-var DOC_HEADERS_=['รหัส','ชื่อรถ','ประเภทเอกสาร','เลขที่เอกสาร','วันหมดอายุ','ไฟล์ PDF (Drive ID)','ชื่อไฟล์','หมายเหตุ','รับทราบวันหมดอายุ','รับทราบโดย','รับทราบเมื่อ','อัปเดตโดย','อัปเดตเมื่อ'];
-var DOC_HISTORY_HEADERS_=['เวลา','ชื่อรถ','ประเภทเอกสาร','เลขที่เอกสาร (เดิม)','วันหมดอายุ (เดิม)','ไฟล์ PDF เดิม (Drive ID)','ชื่อไฟล์เดิม','หมายเหตุเดิม','ดำเนินการโดย','เหตุผล'];
+var DOC_HEADERS_=['รหัส','ชื่อรถ','ประเภทเอกสาร','เลขที่เอกสาร','วันหมดอายุ','ไฟล์ PDF (Drive ID)','ชื่อไฟล์','หมายเหตุ','รับทราบวันหมดอายุ','รับทราบโดย','รับทราบเมื่อ','อัปเดตโดย','อัปเดตเมื่อ','วันที่จดทะเบียน'];
+var DOC_HISTORY_HEADERS_=['เวลา','ชื่อรถ','ประเภทเอกสาร','เลขที่เอกสาร (เดิม)','วันหมดอายุ (เดิม)','ไฟล์ PDF เดิม (Drive ID)','ชื่อไฟล์เดิม','หมายเหตุเดิม','ดำเนินการโดย','เหตุผล','วันที่จดทะเบียนเดิม'];
 var DOC_FOLDER_NAME_='RVS-VM เอกสารรถ';
 var DOC_MAX_BYTES_=4*1024*1024;
 function nowText_(){return Utilities.formatDate(new Date(),'Asia/Bangkok','yyyy-MM-dd HH:mm');}
@@ -263,6 +263,11 @@ function normDate_(v){
   if(v instanceof Date)return Utilities.formatDate(v,'Asia/Bangkok','yyyy-MM-dd');
   var s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
   var d=new Date(s);return isNaN(d.getTime())?s:Utilities.formatDate(d,'Asia/Bangkok','yyyy-MM-dd');
+}
+function validDateKey_(value){
+  var m=String(value||'').match(/^\d{4}-\d{2}-\d{2}$/);if(!m)return false;
+  var p=String(value).split('-'),y=+p[0],mo=+p[1],d=+p[2],dt=new Date(Date.UTC(y,mo-1,d));
+  return dt.getUTCFullYear()===y&&dt.getUTCMonth()===mo-1&&dt.getUTCDate()===d;
 }
 function daysUntil_(dateKey){
   var m=String(dateKey||'').match(/^(\d{4})-(\d{2})-(\d{2})$/),t=todayKey_().match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -277,15 +282,21 @@ function getDocSheet_(name,headers,textCols){
   }
   return sh;
 }
-function docSheet_(){return getDocSheet_(DOC_SHEET_NAME,DOC_HEADERS_,[5,9]);}
-function docHistorySheet_(){return getDocSheet_(DOC_HISTORY_SHEET_NAME,DOC_HISTORY_HEADERS_,[5]);}
+function ensureDocHeaders_(sh,headers,textCols){
+  var last=Math.max(sh.getLastColumn(),1),current=sh.getRange(1,1,1,last).getValues()[0].map(function(x){return String(x||'').trim();});
+  headers.forEach(function(h){if(current.indexOf(h)<0){last++;sh.getRange(1,last).setValue(h);current.push(h);}});
+  (textCols||[]).forEach(function(h){var i=current.indexOf(h);if(i>=0)sh.getRange(1,i+1,sh.getMaxRows(),1).setNumberFormat('@');});
+  return sh;
+}
+function docSheet_(){return ensureDocHeaders_(getDocSheet_(DOC_SHEET_NAME,DOC_HEADERS_,[5,9]),DOC_HEADERS_,['วันหมดอายุ','รับทราบวันหมดอายุ','วันที่จดทะเบียน']);}
+function docHistorySheet_(){return ensureDocHeaders_(getDocSheet_(DOC_HISTORY_SHEET_NAME,DOC_HISTORY_HEADERS_,[5]),DOC_HISTORY_HEADERS_,['วันหมดอายุ (เดิม)','วันที่จดทะเบียนเดิม']);}
 function readDocs_(){
   var sh=ss_().getSheetByName(DOC_SHEET_NAME);if(!sh)return [];
-  return rowsToObjects_(sh).map(function(r){return {row:r._row,id:String(r['รหัส']||''),vehicle:String(r['ชื่อรถ']||''),type:String(r['ประเภทเอกสาร']||''),docNo:String(r['เลขที่เอกสาร']||''),expiry:normDate_(r['วันหมดอายุ']),fileId:String(r['ไฟล์ PDF (Drive ID)']||''),fileName:String(r['ชื่อไฟล์']||''),note:String(r['หมายเหตุ']||''),ackExpiry:normDate_(r['รับทราบวันหมดอายุ']),ackBy:String(r['รับทราบโดย']||''),ackAt:String(r['รับทราบเมื่อ']||''),updatedBy:String(r['อัปเดตโดย']||''),updatedAt:String(r['อัปเดตเมื่อ']||'')};});
+  return rowsToObjects_(sh).map(function(r){return {row:r._row,id:String(r['รหัส']||''),vehicle:String(r['ชื่อรถ']||''),type:String(r['ประเภทเอกสาร']||''),docNo:String(r['เลขที่เอกสาร']||''),expiry:normDate_(r['วันหมดอายุ']),registrationDate:normDate_(r['วันที่จดทะเบียน']),fileId:String(r['ไฟล์ PDF (Drive ID)']||''),fileName:String(r['ชื่อไฟล์']||''),note:String(r['หมายเหตุ']||''),ackExpiry:normDate_(r['รับทราบวันหมดอายุ']),ackBy:String(r['รับทราบโดย']||''),ackAt:String(r['รับทราบเมื่อ']||''),updatedBy:String(r['อัปเดตโดย']||''),updatedAt:String(r['อัปเดตเมื่อ']||'')};});
 }
 function readDocHistory_(){
   var sh=ss_().getSheetByName(DOC_HISTORY_SHEET_NAME);if(!sh)return [];
-  return rowsToObjects_(sh).map(function(r){return {at:String(r['เวลา']||''),vehicle:String(r['ชื่อรถ']||''),type:String(r['ประเภทเอกสาร']||''),docNo:String(r['เลขที่เอกสาร (เดิม)']||''),expiry:normDate_(r['วันหมดอายุ (เดิม)']),fileId:String(r['ไฟล์ PDF เดิม (Drive ID)']||''),fileName:String(r['ชื่อไฟล์เดิม']||''),note:String(r['หมายเหตุเดิม']||''),by:String(r['ดำเนินการโดย']||''),reason:String(r['เหตุผล']||'')};});
+  return rowsToObjects_(sh).map(function(r){return {at:String(r['เวลา']||''),vehicle:String(r['ชื่อรถ']||''),type:String(r['ประเภทเอกสาร']||''),docNo:String(r['เลขที่เอกสาร (เดิม)']||''),expiry:normDate_(r['วันหมดอายุ (เดิม)']),registrationDate:normDate_(r['วันที่จดทะเบียนเดิม']),fileId:String(r['ไฟล์ PDF เดิม (Drive ID)']||''),fileName:String(r['ชื่อไฟล์เดิม']||''),note:String(r['หมายเหตุเดิม']||''),by:String(r['ดำเนินการโดย']||''),reason:String(r['เหตุผล']||'')};});
 }
 function getDocVehicles_(){
   var plateCols=['ป้ายทะเบียน','ทะเบียน','เลขทะเบียน'];
@@ -294,12 +305,12 @@ function getDocVehicles_(){
     return {name:String(v['ชื่อรถ']||'').trim(),plate:plate};
   }).filter(function(v){return v.name;});
 }
-function docToClient_(d){return {id:d.id,vehicle:d.vehicle,type:d.type,docNo:d.docNo,expiry:d.expiry,hasFile:!!d.fileId,fileId:d.fileId,fileName:d.fileName,note:d.note,ackExpiry:d.ackExpiry,ackBy:d.ackBy,ackAt:d.ackAt,updatedBy:d.updatedBy,updatedAt:d.updatedAt,daysLeft:daysUntil_(d.expiry)};}
+function docToClient_(d){return {id:d.id,vehicle:d.vehicle,type:d.type,docNo:d.docNo,expiry:d.expiry,registrationDate:d.registrationDate||'',hasFile:!!d.fileId,fileId:d.fileId,fileName:d.fileName,note:d.note,ackExpiry:d.ackExpiry,ackBy:d.ackBy,ackAt:d.ackAt,updatedBy:d.updatedBy,updatedAt:d.updatedAt,daysLeft:daysUntil_(d.expiry)};}
 // แจ้งเตือน: เหลือ <= DOC_ALERT_DAYS_ วัน หรือหมดอายุแล้ว และยังไม่กด "รับทราบ" (รับทราบผูกกับวันหมดอายุนั้น ๆ ต่ออายุใหม่แล้วแจ้งเตือนรอบใหม่)
 function computeDocAlerts_(docs){
   var out=[];
   docs.forEach(function(d){
-    if(!d.expiry)return;var left=daysUntil_(d.expiry);if(left==null)return;
+    if(d.type==='ทะเบียน'||!d.expiry)return;var left=daysUntil_(d.expiry);if(left==null)return;
     if(left<=DOC_ALERT_DAYS_&&d.ackExpiry!==d.expiry)out.push({vehicle:d.vehicle,type:d.type,docNo:d.docNo,expiry:d.expiry,daysLeft:left});
   });
   out.sort(function(a,b){return a.daysLeft-b.daysLeft;});
@@ -332,11 +343,14 @@ function docUploadPdf_(file,vehicle,type,expiry){
 // mode: 'renew' = ต่ออายุ (ย้ายข้อมูลเดิมลงประวัติ แล้วบันทึกข้อมูลใหม่) | อื่น ๆ = สร้างใหม่/แก้ไขข้อมูลเดิม
 function saveVehicleDoc(payload,adminToken){
   var admin=requireAdminSession_(adminToken),p=payload||{};
-  var vehicle=String(p.vehicle||'').trim(),type=String(p.type||'').trim(),expiry=String(p.expiry||'').trim(),mode=p.mode==='renew'?'renew':'save';
+  var vehicle=String(p.vehicle||'').trim(),type=String(p.type||'').trim(),expiry=String(p.expiry||'').trim(),registrationDate=String(p.registrationDate||'').trim(),mode=p.mode==='renew'?'renew':'save';
   var docNo=String(p.docNo||'').trim().slice(0,80),note=String(p.note||'').trim().slice(0,500);
   if(!getDocVehicles_().some(function(v){return v.name===vehicle;}))throw new Error('ไม่พบรถคันนี้ในชีต Vehicles');
   if(DOC_TYPES_.indexOf(type)<0)throw new Error('ประเภทเอกสารไม่ถูกต้อง');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(expiry)||isNaN(new Date(expiry+'T00:00:00').getTime()))throw new Error('กรุณาระบุวันหมดอายุให้ถูกต้อง');
+  if(type==='ทะเบียน'){
+    if(!validDateKey_(registrationDate))throw new Error('กรุณาระบุวันที่จดทะเบียนให้ถูกต้อง');
+    expiry='';
+  }else if(!validDateKey_(expiry))throw new Error('กรุณาระบุวันหมดอายุให้ถูกต้อง');
   var lock=LockService.getScriptLock();lock.waitLock(15000);
   try{
     var docs=readDocs_(),existing=null;
@@ -347,25 +361,25 @@ function saveVehicleDoc(payload,adminToken){
     }
     var up=null;if(p.file&&p.file.base64)up=docUploadPdf_(p.file,vehicle,type,expiry);
     var who=admin.account,now=nowText_(),hs=docHistorySheet_();
-    var pushHistory=function(d,reason){var r=hs.getLastRow()+1;hs.getRange(r,5,1,1).setNumberFormat('@');hs.getRange(r,1,1,10).setValues([[now,d.vehicle,d.type,d.docNo,d.expiry,d.fileId,d.fileName,d.note,who,reason]]);};
+    var pushHistory=function(d,reason){var r=hs.getLastRow()+1;hs.getRange(r,5,1,1).setNumberFormat('@');hs.getRange(r,1,1,11).setValues([[now,d.vehicle,d.type,d.docNo,d.expiry,d.fileId,d.fileName,d.note,who,reason,d.registrationDate||'']]);};
     var sh=docSheet_(),action,newRec;
     if(!existing){
       action='DOC_CREATE';
-      newRec={id:'DOC-'+Utilities.getUuid().substring(0,8).toUpperCase(),vehicle:vehicle,type:type,docNo:docNo,expiry:expiry,fileId:up?up.id:'',fileName:up?up.name:'',note:note,ackExpiry:'',ackBy:'',ackAt:''};
-      var r1=sh.getLastRow()+1;sh.getRange(r1,5,1,1).setNumberFormat('@');sh.getRange(r1,9,1,1).setNumberFormat('@');
-      sh.getRange(r1,1,1,13).setValues([[newRec.id,vehicle,type,docNo,expiry,newRec.fileId,newRec.fileName,note,'','','',who,now]]);
+      newRec={id:'DOC-'+Utilities.getUuid().substring(0,8).toUpperCase(),vehicle:vehicle,type:type,docNo:docNo,expiry:expiry,registrationDate:type==='ทะเบียน'?registrationDate:'',fileId:up?up.id:'',fileName:up?up.name:'',note:note,ackExpiry:'',ackBy:'',ackAt:''};
+      var r1=sh.getLastRow()+1;sh.getRange(r1,5,1,1).setNumberFormat('@');sh.getRange(r1,9,1,1).setNumberFormat('@');sh.getRange(r1,14,1,1).setNumberFormat('@');
+      sh.getRange(r1,1,1,14).setValues([[newRec.id,vehicle,type,docNo,expiry,newRec.fileId,newRec.fileName,note,'','','',who,now,newRec.registrationDate]]);
     }else{
-      var fileChanged=!!up;
+      var fileChanged=!!up,registrationDateChanged=type==='ทะเบียน'&&!!existing.registrationDate&&existing.registrationDate!==registrationDate;
       if(mode==='renew'){action='DOC_RENEW';pushHistory(existing,'ต่ออายุ');}
-      else{action='DOC_EDIT';if(fileChanged&&existing.fileId)pushHistory(existing,'เปลี่ยนไฟล์แนบ');}
+      else{action='DOC_EDIT';if((fileChanged&&existing.fileId)||registrationDateChanged)pushHistory(existing,registrationDateChanged?'แก้ไขวันที่จดทะเบียน':'เปลี่ยนไฟล์แนบ');}
       var keepFile=(mode!=='renew'&&!fileChanged);
-      newRec={id:existing.id,vehicle:vehicle,type:type,docNo:docNo,expiry:expiry,
+      newRec={id:existing.id,vehicle:vehicle,type:type,docNo:docNo,expiry:(type==='ทะเบียน'&&existing.type==='ทะเบียน'&&existing.expiry)?existing.expiry:expiry,registrationDate:type==='ทะเบียน'?registrationDate:'',
         fileId:keepFile?existing.fileId:(up?up.id:''),fileName:keepFile?existing.fileName:(up?up.name:''),note:note,
         ackExpiry:(expiry===existing.expiry&&mode!=='renew')?existing.ackExpiry:'',ackBy:(expiry===existing.expiry&&mode!=='renew')?existing.ackBy:'',ackAt:(expiry===existing.expiry&&mode!=='renew')?existing.ackAt:''};
-      sh.getRange(existing.row,5,1,1).setNumberFormat('@');sh.getRange(existing.row,9,1,1).setNumberFormat('@');
-      sh.getRange(existing.row,1,1,13).setValues([[newRec.id,vehicle,type,docNo,expiry,newRec.fileId,newRec.fileName,note,newRec.ackExpiry,newRec.ackBy,newRec.ackAt,who,now]]);
+      sh.getRange(existing.row,5,1,1).setNumberFormat('@');sh.getRange(existing.row,9,1,1).setNumberFormat('@');sh.getRange(existing.row,14,1,1).setNumberFormat('@');
+      sh.getRange(existing.row,1,1,14).setValues([[newRec.id,vehicle,type,docNo,newRec.expiry,newRec.fileId,newRec.fileName,note,newRec.ackExpiry,newRec.ackBy,newRec.ackAt,who,now,newRec.registrationDate]]);
     }
-    var detail={record:{id:newRec.id,vehicle:vehicle,type:type,docNo:docNo,expiry:expiry,oldExpiry:existing?existing.expiry:'',oldDocNo:existing?existing.docNo:'',note:note,hasFile:!!newRec.fileId}};
+    var detail={record:{id:newRec.id,vehicle:vehicle,type:type,docNo:docNo,expiry:newRec.expiry,registrationDate:newRec.registrationDate,oldExpiry:existing?existing.expiry:'',oldRegistrationDate:existing?existing.registrationDate:'',oldDocNo:existing?existing.docNo:'',note:note,hasFile:!!newRec.fileId}};
     try{appendAuditLog_(action,newRec.id,who,existing?existing.expiry:'',expiry,vehicle+' / '+type,detail);}catch(e){}
     return {ok:true,action:action,id:newRec.id};
   }finally{lock.releaseLock();}

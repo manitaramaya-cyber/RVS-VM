@@ -1240,7 +1240,8 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
         <div class="field"><label>รถ</label><input id="vdVehicle" readonly></div>
         <div class="field"><label>ประเภทเอกสาร</label><input id="vdType" readonly></div>
         <div class="field"><label>เลขที่เอกสาร / เลขกรมธรรม์</label><input id="vdDocNo" maxlength="80" placeholder="เช่น เลขที่กรมธรรม์"></div>
-        <div class="field"><label>วันหมดอายุ <span class="vd-req">*</span></label><input type="date" id="vdExpiry"></div>
+        <div class="field" id="vdExpiryField"><label>วันหมดอายุ <span class="vd-req">*</span></label><input type="date" id="vdExpiry"></div>
+        <div class="field" id="vdRegDateField" hidden><label>วันที่จดทะเบียน <span class="vd-req">*</span></label><input type="date" id="vdRegDate"></div>
         <div class="field vd-full"><label>ไฟล์เอกสาร (PDF สแกน ไม่เกิน 4 MB)</label><input type="file" id="vdFile" accept="application/pdf,.pdf"><div class="field-hint" id="vdFileHint"></div></div>
         <div class="field vd-full"><label>หมายเหตุ</label><textarea id="vdNote" rows="2" maxlength="500"></textarea></div>
       </div>
@@ -3120,7 +3121,7 @@ function reportDetails(log){
   }
   if(a.indexOf('DOC_')===0){
     html+=reportField('รถ',r.vehicle);html+=reportField('ประเภทเอกสาร',r.type);html+=reportField('เลขที่เอกสาร',r.docNo);
-    html+=reportField('วันหมดอายุ',r.expiry);html+=reportField('วันหมดอายุเดิม',r.oldExpiry);html+=reportField('เลขที่เดิม',r.oldDocNo);
+    html+=reportField(r.type==='ทะเบียน'?'วันที่จดทะเบียน':'วันหมดอายุ',r.type==='ทะเบียน'?r.registrationDate:r.expiry);html+=reportField(r.type==='ทะเบียน'?'วันที่จดทะเบียนเดิม':'วันหมดอายุเดิม',r.type==='ทะเบียน'?r.oldRegistrationDate:r.oldExpiry);html+=reportField('เลขที่เดิม',r.oldDocNo);
     html+=reportField('แนบไฟล์ PDF',r.hasFile?'มี':'ไม่มี');html+=reportField('หมายเหตุ',r.note,true);
     return html||'<div class="empty">ไม่มีรายละเอียดเพิ่มเติม</div>';
   }
@@ -3553,6 +3554,7 @@ var docWindow=30,vdData=null,vdSel=null;
 function vdShort(k){var m=String(k||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(m[3]+'/'+m[2]+'/'+(+m[1]+543)):(k||'-')}
 function vdStatus(d){
   if(!d)return {cls:'none',txt:'ยังไม่บันทึก'};
+  if(d.type==='ทะเบียน')return d.registrationDate?{cls:'ok',txt:'บันทึกแล้ว'}:{cls:'none',txt:'ยังไม่บันทึกวันที่จดทะเบียน'};
   if(!d.expiry)return {cls:'none',txt:'ไม่ระบุวันหมดอายุ'};
   var left=d.daysLeft;
   if(left<0)return d.ackExpiry===d.expiry?{cls:'acked',txt:'หมดอายุแล้ว (รับทราบ)'}:{cls:'expired',txt:'หมดอายุแล้ว '+(-left)+' วัน'};
@@ -3612,7 +3614,7 @@ function vdRender(){
       h+='<tr><td class="vd-veh">'+esc(v.name)+(v.plate?'<small>'+esc(v.plate)+'</small>':'')+'</td>';
       types.forEach(function(t){
         var d=vdFind(v.name,t),s=vdStatus(d),sel=vdSel&&vdSel.vehicle===v.name&&vdSel.type===t;
-        h+='<td><button type="button" class="vd-cell'+(sel?' sel':'')+'" data-vd-v="'+esc(v.name)+'" data-vd-t="'+esc(t)+'">'+(d&&d.expiry?'หมดอายุ '+esc(vdShort(d.expiry)):'—')+(d&&d.hasFile?' <span class="vd-pdf">📎PDF</span>':'')+'<br><span class="vd-chip '+s.cls+'">'+esc(s.txt)+'</span></button></td>';
+        h+='<td><button type="button" class="vd-cell'+(sel?' sel':'')+'" data-vd-v="'+esc(v.name)+'" data-vd-t="'+esc(t)+'">'+(d&&d.type==='ทะเบียน'&&d.registrationDate?'จดทะเบียน '+esc(vdShort(d.registrationDate)):(d&&d.expiry?'หมดอายุ '+esc(vdShort(d.expiry)):'—'))+(d&&d.hasFile?' <span class="vd-pdf">📎PDF</span>':'')+'<br><span class="vd-chip '+s.cls+'">'+esc(s.txt)+'</span></button></td>';
       });
       h+='</tr>';
     });
@@ -3628,7 +3630,7 @@ function vdRefreshCurrent(){
   var d=vdFind(vdSel.vehicle,vdSel.type),box=document.getElementById('vdCurrent');
   if(!d){box.innerHTML='ยังไม่มีข้อมูลเอกสารนี้ — กรอกข้อมูลแล้วกด “บันทึก”';return}
   var s=vdStatus(d);
-  box.innerHTML='<b>ข้อมูลปัจจุบัน:</b> เลขที่ '+esc(d.docNo||'-')+' · หมดอายุ '+esc(vdShort(d.expiry))+' <span class="vd-chip '+s.cls+'">'+esc(s.txt)+'</span>'+(d.hasFile?' · <a href="#" id="vdCurFile">📎 เปิดไฟล์ PDF</a>':' · ยังไม่มีไฟล์ PDF')+(d.updatedBy?'<br>อัปเดตล่าสุดโดย '+esc(d.updatedBy)+' เมื่อ '+esc(d.updatedAt):'');
+  box.innerHTML='<b>ข้อมูลปัจจุบัน:</b> เลขที่ '+esc(d.docNo||'-')+' · '+(d.type==='ทะเบียน'?'วันที่จดทะเบียน '+esc(vdShort(d.registrationDate)):'หมดอายุ '+esc(vdShort(d.expiry)))+' <span class="vd-chip '+s.cls+'">'+esc(s.txt)+'</span>'+(d.hasFile?' · <a href="#" id="vdCurFile">📎 เปิดไฟล์ PDF</a>':' · ยังไม่มีไฟล์ PDF')+(d.updatedBy?'<br>อัปเดตล่าสุดโดย '+esc(d.updatedBy)+' เมื่อ '+esc(d.updatedAt):'');
   var f=document.getElementById('vdCurFile');if(f)f.addEventListener('click',function(e){e.preventDefault();vdOpenFile(d.fileId)});
 }
 function vdOpenForm(vehicle,type,renew){
@@ -3638,10 +3640,12 @@ function vdOpenForm(vehicle,type,renew){
   document.getElementById('vdFormTitle').textContent=(renew?'ต่ออายุ ':'บันทึกเอกสาร ')+type+' — '+vehicle;
   document.getElementById('vdVehicle').value=vehicle;document.getElementById('vdType').value=type;
   document.getElementById('vdFile').value='';document.getElementById('vdFormMsg').textContent='';
-  if(renew||!d){document.getElementById('vdDocNo').value=renew&&d?'':'';document.getElementById('vdExpiry').value='';document.getElementById('vdNote').value=''}
-  else{document.getElementById('vdDocNo').value=d.docNo;document.getElementById('vdExpiry').value=d.expiry;document.getElementById('vdNote').value=d.note}
+  var isReg=type==='ทะเบียน';
+  document.getElementById('vdExpiryField').hidden=isReg;document.getElementById('vdRegDateField').hidden=!isReg;
+  if(renew||!d){document.getElementById('vdDocNo').value='';document.getElementById('vdExpiry').value='';document.getElementById('vdRegDate').value='';document.getElementById('vdNote').value=''}
+  else{document.getElementById('vdDocNo').value=d.docNo;document.getElementById('vdExpiry').value=d.expiry;document.getElementById('vdRegDate').value=d.registrationDate||'';document.getElementById('vdNote').value=d.note}
   document.getElementById('vdFileHint').textContent=d&&d.hasFile?(renew?'ต่ออายุ: แนบไฟล์ PDF ฉบับใหม่ (ไฟล์เดิมจะเก็บไว้ในประวัติ)':'ไม่เลือกไฟล์ = ใช้ไฟล์เดิม · เลือกไฟล์ใหม่ = เปลี่ยนไฟล์ (ไฟล์เดิมเก็บไว้ในประวัติ)'):'';
-  document.getElementById('vdBtnRenew').style.display=d?'':'none';
+  document.getElementById('vdBtnRenew').style.display=(d&&!isReg)?'':'none';
   document.getElementById('vdBtnSave').textContent=d?'💾 แก้ไขข้อมูลเดิม (แก้คำผิด / เพิ่มไฟล์)':'💾 บันทึกข้อมูลใหม่';
   document.getElementById('vdBtnAck').style.display=(d&&d.expiry&&vdStatus(d).cls!=='ok'&&vdStatus(d).cls!=='acked'&&vdStatus(d).cls!=='none')?'':'none';
   vdRefreshCurrent();vdRender();
@@ -3651,18 +3655,19 @@ function vdCloseForm(){document.getElementById('vdFormCard').hidden=true;vdSel=n
 function vdReadFile(f){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result).split(',')[1]||'')};r.onerror=function(){rej(new Error('อ่านไฟล์ไม่สำเร็จ'))};r.readAsDataURL(f)})}
 async function vdSave(mode){
   if(!vdSel)return;
-  var msg=document.getElementById('vdFormMsg'),expiry=document.getElementById('vdExpiry').value,fileEl=document.getElementById('vdFile'),f=fileEl.files&&fileEl.files[0];
-  if(!expiry){msg.textContent='กรุณาระบุวันหมดอายุ';return}
+  var msg=document.getElementById('vdFormMsg'),expiry=document.getElementById('vdExpiry').value,registrationDate=document.getElementById('vdRegDate').value,isReg=vdSel.type==='ทะเบียน',fileEl=document.getElementById('vdFile'),f=fileEl.files&&fileEl.files[0];
+  if(isReg&&!registrationDate){msg.textContent='กรุณาระบุวันที่จดทะเบียน';return}
+  if(!isReg&&!expiry){msg.textContent='กรุณาระบุวันหมดอายุ';return}
   if(f){
     if(!/\.pdf$/i.test(f.name)&&f.type!=='application/pdf'){msg.textContent='ไฟล์ต้องเป็น PDF เท่านั้น';return}
     if(f.size>4*1024*1024){msg.textContent='ไฟล์ใหญ่เกิน 4 MB กรุณาลดขนาดไฟล์ก่อน';return}
   }
-  if(mode==='renew'){var d0=vdFind(vdSel.vehicle,vdSel.type);if(d0&&expiry<=d0.expiry){msg.textContent='วันหมดอายุใหม่ต้องมากกว่าวันหมดอายุเดิม ('+vdShort(d0.expiry)+')';return}
+  if(mode==='renew'&&!isReg){var d0=vdFind(vdSel.vehicle,vdSel.type);if(d0&&expiry<=d0.expiry){msg.textContent='วันหมดอายุใหม่ต้องมากกว่าวันหมดอายุเดิม ('+vdShort(d0.expiry)+')';return}
     if(!confirm('ยืนยันต่ออายุ '+vdSel.type+' ของ '+vdSel.vehicle+'?\nข้อมูลเดิมจะถูกเก็บไว้ในประวัติ และข้อมูลใหม่จะเป็นข้อมูลปัจจุบัน'))return}
   var btns=['vdBtnRenew','vdBtnSave','vdBtnAck'].map(function(i){return document.getElementById(i)});btns.forEach(function(b){b.disabled=true});msg.textContent='กำลังบันทึก...';
   try{
     var file=null;if(f){file={name:f.name,base64:await vdReadFile(f)}}
-    var payload={vehicle:vdSel.vehicle,type:vdSel.type,docNo:document.getElementById('vdDocNo').value.trim(),expiry:expiry,note:document.getElementById('vdNote').value.trim(),mode:mode,file:file};
+    var payload={vehicle:vdSel.vehicle,type:vdSel.type,docNo:document.getElementById('vdDocNo').value.trim(),expiry:expiry,registrationDate:registrationDate,note:document.getElementById('vdNote').value.trim(),mode:mode,file:file};
     google.script.run.withSuccessHandler(function(r){
       btns.forEach(function(b){b.disabled=false});msg.textContent='✓ บันทึกเรียบร้อยแล้ว';
       var keep=vdSel;vdLoad();loadDocAlerts();setTimeout(function(){if(keep&&mode==='renew'){vdCloseForm()}},600);
@@ -3674,7 +3679,7 @@ function vdRenderHistory(){
   var box=document.getElementById('vdHistory');if(!box||!vdData)return;
   var v=document.getElementById('vdHistVehicle').value,rows=(vdData.history||[]).filter(function(h){return !v||h.vehicle===v});
   if(!rows.length){box.innerHTML='<div class="empty">ยังไม่มีประวัติ (ข้อมูลเดิมจะมาอยู่ที่นี่เมื่อมีการต่ออายุหรือเปลี่ยนไฟล์)</div>';return}
-  box.innerHTML=rows.map(function(h,i){return '<div class="vd-hist"><b>'+esc(h.type)+' — '+esc(h.vehicle)+'</b> · '+esc(h.reason)+' เมื่อ '+esc(h.at)+' โดย '+esc(h.by)+'<br>ข้อมูลเดิม: เลขที่ '+esc(h.docNo||'-')+' · หมดอายุ '+esc(vdShort(h.expiry))+(h.note?'<br>หมายเหตุ: '+esc(h.note):'')+(h.fileId?'<br><a href="#" data-vd-hf="'+i+'">📎 เปิดไฟล์ PDF เดิม</a>':'')+'</div>'}).join('');
+  box.innerHTML=rows.map(function(h,i){return '<div class="vd-hist"><b>'+esc(h.type)+' — '+esc(h.vehicle)+'</b> · '+esc(h.reason)+' เมื่อ '+esc(h.at)+' โดย '+esc(h.by)+'<br>ข้อมูลเดิม: เลขที่ '+esc(h.docNo||'-')+' · '+(h.type==='ทะเบียน'?'วันที่จดทะเบียน ':'หมดอายุ ')+esc(vdShort(h.type==='ทะเบียน'?h.registrationDate:h.expiry))+(h.note?'<br>หมายเหตุ: '+esc(h.note):'')+(h.fileId?'<br><a href="#" data-vd-hf="'+i+'">📎 เปิดไฟล์ PDF เดิม</a>':'')+'</div>'}).join('');
   box.querySelectorAll('[data-vd-hf]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();vdOpenFile(rows[+a.getAttribute('data-vd-hf')].fileId)})});
 }
 function vdOpenFile(fileId){
