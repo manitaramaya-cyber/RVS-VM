@@ -264,6 +264,11 @@ function normDate_(v){
   var s=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
   var d=new Date(s);return isNaN(d.getTime())?s:Utilities.formatDate(d,'Asia/Bangkok','yyyy-MM-dd');
 }
+function validDateKey_(value){
+  var m=String(value||'').match(/^\d{4}-\d{2}-\d{2}$/);if(!m)return false;
+  var p=String(value).split('-'),y=+p[0],mo=+p[1],d=+p[2],dt=new Date(Date.UTC(y,mo-1,d));
+  return dt.getUTCFullYear()===y&&dt.getUTCMonth()===mo-1&&dt.getUTCDate()===d;
+}
 function daysUntil_(dateKey){
   var m=String(dateKey||'').match(/^(\d{4})-(\d{2})-(\d{2})$/),t=todayKey_().match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if(!m||!t)return null;
@@ -343,9 +348,9 @@ function saveVehicleDoc(payload,adminToken){
   if(!getDocVehicles_().some(function(v){return v.name===vehicle;}))throw new Error('ไม่พบรถคันนี้ในชีต Vehicles');
   if(DOC_TYPES_.indexOf(type)<0)throw new Error('ประเภทเอกสารไม่ถูกต้อง');
   if(type==='ทะเบียน'){
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(registrationDate)||isNaN(new Date(registrationDate+'T00:00:00').getTime()))throw new Error('กรุณาระบุวันที่จดทะเบียนให้ถูกต้อง');
+    if(!validDateKey_(registrationDate))throw new Error('กรุณาระบุวันที่จดทะเบียนให้ถูกต้อง');
     expiry='';
-  }else if(!/^\d{4}-\d{2}-\d{2}$/.test(expiry)||isNaN(new Date(expiry+'T00:00:00').getTime()))throw new Error('กรุณาระบุวันหมดอายุให้ถูกต้อง');
+  }else if(!validDateKey_(expiry))throw new Error('กรุณาระบุวันหมดอายุให้ถูกต้อง');
   var lock=LockService.getScriptLock();lock.waitLock(15000);
   try{
     var docs=readDocs_(),existing=null;
