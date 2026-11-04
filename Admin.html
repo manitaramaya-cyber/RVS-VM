@@ -3014,13 +3014,13 @@ function renderDashboard(){
   (lowReady||[]).forEach(function(x){if(Number(x.score)<50&&x.vehicle)unreadyNames[x.vehicle]=true;});
   var busy=Object.keys(busyNames).length,unready=Object.keys(unreadyNames).length;
   var maint=Object.keys(maintNames).filter(function(n){return !unreadyNames[n]&&!busyNames[n];}).length;
-  var ready=Math.max(0,total-busy-maint-unready);
+  var ready=Math.max(0,total-maint-unready);
   function put(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
   put('dashboardFleetTotal',total);put('dashboardFleetReady',ready);put('dashboardFleetMaint',maint);put('dashboardFleetUnavailable',unready);
   put('dashboardFleetReadyPct',total?Math.round(ready/total*100)+'% ของรถทั้งหมด':'ยังไม่มีข้อมูลรถ');
   put('dashboardTodayCount',todayItems.length);put('dashboardPendingCount',pending.length+(docAlerts||[]).length+(maintAlerts||[]).length+(lowReady||[]).length);
   put('quickPendingCount',pending.length+' รายการรอดำเนินการ');
-  var clock=document.getElementById('dashboardClock');if(clock)clock.textContent=new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.';
+  var now=new Date(),clock=document.getElementById('dashboardClock'),dateEl=document.getElementById('dashboardDate');if(clock)clock.textContent=now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.';if(dateEl)dateEl.textContent=now.toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   var table=document.getElementById('dashboardTodayTable');
   if(table){
     table.innerHTML=todayItems.length?todayItems.map(function(r){
