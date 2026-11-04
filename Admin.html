@@ -3554,6 +3554,7 @@ var docWindow=30,vdData=null,vdSel=null;
 function vdShort(k){var m=String(k||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(m[3]+'/'+m[2]+'/'+(+m[1]+543)):(k||'-')}
 function vdStatus(d){
   if(!d)return {cls:'none',txt:'ยังไม่บันทึก'};
+  if(d.type==='ทะเบียน')return d.registrationDate?{cls:'ok',txt:'บันทึกแล้ว'}:{cls:'none',txt:'ยังไม่บันทึกวันที่จดทะเบียน'};
   if(!d.expiry)return {cls:'none',txt:'ไม่ระบุวันหมดอายุ'};
   var left=d.daysLeft;
   if(left<0)return d.ackExpiry===d.expiry?{cls:'acked',txt:'หมดอายุแล้ว (รับทราบ)'}:{cls:'expired',txt:'หมดอายุแล้ว '+(-left)+' วัน'};
@@ -3644,7 +3645,7 @@ function vdOpenForm(vehicle,type,renew){
   if(renew||!d){document.getElementById('vdDocNo').value='';document.getElementById('vdExpiry').value='';document.getElementById('vdRegDate').value='';document.getElementById('vdNote').value=''}
   else{document.getElementById('vdDocNo').value=d.docNo;document.getElementById('vdExpiry').value=d.expiry;document.getElementById('vdRegDate').value=d.registrationDate||'';document.getElementById('vdNote').value=d.note}
   document.getElementById('vdFileHint').textContent=d&&d.hasFile?(renew?'ต่ออายุ: แนบไฟล์ PDF ฉบับใหม่ (ไฟล์เดิมจะเก็บไว้ในประวัติ)':'ไม่เลือกไฟล์ = ใช้ไฟล์เดิม · เลือกไฟล์ใหม่ = เปลี่ยนไฟล์ (ไฟล์เดิมเก็บไว้ในประวัติ)'):'';
-  document.getElementById('vdBtnRenew').style.display=d?'':'none';
+  document.getElementById('vdBtnRenew').style.display=(d&&!isReg)?'':'none';
   document.getElementById('vdBtnSave').textContent=d?'💾 แก้ไขข้อมูลเดิม (แก้คำผิด / เพิ่มไฟล์)':'💾 บันทึกข้อมูลใหม่';
   document.getElementById('vdBtnAck').style.display=(d&&d.expiry&&vdStatus(d).cls!=='ok'&&vdStatus(d).cls!=='acked'&&vdStatus(d).cls!=='none')?'':'none';
   vdRefreshCurrent();vdRender();
