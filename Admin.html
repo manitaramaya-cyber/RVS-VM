@@ -925,7 +925,7 @@ body{background:var(--bg);min-height:100vh}
 .dashboard-table tbody tr:last-child td{border-bottom:0}
 .dashboard-table .dashboard-empty{text-align:center}
 .dashboard-panel-footer{display:flex;justify-content:flex-end;padding:8px 2px 0}
-.dashboard-text-action{border:0;background:transparent;color:#1685db;font:600 12px inherit;cursor:pointer}
+.dashboard-text-action{border:0;background:transparent;color:#1685db;font:600 12px 'Prompt',sans-serif;cursor:pointer}
 .dashboard-actions-body{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 .action-group{min-width:0}.action-group .dashboard-section-label{margin-top:0;font-size:12px;font-weight:700;color:var(--ink)}
 .action-group .dashboard-request{padding:9px;margin-bottom:7px}
@@ -3057,8 +3057,9 @@ function renderDashboard(){
   todayItems.forEach(function(r){String(r.vehicles||'').split(',').forEach(function(n){n=n.trim();if(n)busyNames[n]=true;});});
   (maintAlerts||[]).concat(lowReady||[]).forEach(function(x){if(x.vehicle)maintNames[x.vehicle]=true;});
   (lowReady||[]).forEach(function(x){if(Number(x.score)<50&&x.vehicle)unreadyNames[x.vehicle]=true;});
-  var busy=Object.keys(busyNames).length,maint=Object.keys(maintNames).length,unready=Object.keys(unreadyNames).length;
-  var ready=Math.max(0,total-busy-maint);
+  var busy=Object.keys(busyNames).length,unready=Object.keys(unreadyNames).length;
+  var maint=Object.keys(maintNames).filter(function(n){return !unreadyNames[n]&&!busyNames[n];}).length;
+  var ready=Math.max(0,total-busy-maint-unready);
   function put(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
   put('dashboardFleetTotal',total);put('dashboardFleetReady',ready);put('dashboardFleetMaint',maint);put('dashboardFleetUnavailable',unready);
   put('dashboardFleetReadyPct',total?Math.round(ready/total*100)+'% ของรถทั้งหมด':'ยังไม่มีข้อมูลรถ');
@@ -3102,6 +3103,7 @@ function renderDashboard(){
     else recommendation.textContent='ไม่พบงานเร่งด่วนจากข้อมูลที่โหลดในขณะนี้ ตรวจสอบตารางเดินรถและความพร้อมของรถตามรอบปกติ';
   }
   dashboardRenderCalendar();dashboardRenderSelected();dashboardRenderPending();dashboardRenderMultiDay();dashboardRenderConflicts();
+  put('dashboardPendingCount',pending.length+(docAlerts||[]).length+(maintAlerts||[]).length+(lowReady||[]).length);
   var count=document.getElementById('dashboardBookingCount');if(count)count.textContent=active.length;
 }
 dashboardInitTheme();
@@ -3797,6 +3799,7 @@ function loadDocAlerts(cb){
     dashboardRenderMaintAlerts();
     var w=document.getElementById('dashboardDocWindow');if(w)w.textContent=docWindow;
     dashboardRenderDocAlerts();
+    if(typeof renderDashboard==='function')renderDashboard();
     if(typeof dashboardRenderCalendar==='function')dashboardRenderCalendar();
     if(typeof dashboardRenderSelectedDocs==='function')dashboardRenderSelectedDocs();
     if(document.querySelector('.tab.active')&&document.querySelector('.tab.active').dataset.v==='calendar'&&typeof renderCalendar==='function')renderCalendar();
