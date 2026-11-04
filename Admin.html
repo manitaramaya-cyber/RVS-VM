@@ -3121,7 +3121,7 @@ function reportDetails(log){
   }
   if(a.indexOf('DOC_')===0){
     html+=reportField('รถ',r.vehicle);html+=reportField('ประเภทเอกสาร',r.type);html+=reportField('เลขที่เอกสาร',r.docNo);
-    html+=reportField('วันหมดอายุ',r.expiry);html+=reportField('วันหมดอายุเดิม',r.oldExpiry);html+=reportField('เลขที่เดิม',r.oldDocNo);
+    html+=reportField(r.type==='ทะเบียน'?'วันที่จดทะเบียน':'วันหมดอายุ',r.type==='ทะเบียน'?r.registrationDate:r.expiry);html+=reportField(r.type==='ทะเบียน'?'วันที่จดทะเบียนเดิม':'วันหมดอายุเดิม',r.type==='ทะเบียน'?r.oldRegistrationDate:r.oldExpiry);html+=reportField('เลขที่เดิม',r.oldDocNo);
     html+=reportField('แนบไฟล์ PDF',r.hasFile?'มี':'ไม่มี');html+=reportField('หมายเหตุ',r.note,true);
     return html||'<div class="empty">ไม่มีรายละเอียดเพิ่มเติม</div>';
   }
@@ -3679,7 +3679,7 @@ function vdRenderHistory(){
   var box=document.getElementById('vdHistory');if(!box||!vdData)return;
   var v=document.getElementById('vdHistVehicle').value,rows=(vdData.history||[]).filter(function(h){return !v||h.vehicle===v});
   if(!rows.length){box.innerHTML='<div class="empty">ยังไม่มีประวัติ (ข้อมูลเดิมจะมาอยู่ที่นี่เมื่อมีการต่ออายุหรือเปลี่ยนไฟล์)</div>';return}
-  box.innerHTML=rows.map(function(h,i){return '<div class="vd-hist"><b>'+esc(h.type)+' — '+esc(h.vehicle)+'</b> · '+esc(h.reason)+' เมื่อ '+esc(h.at)+' โดย '+esc(h.by)+'<br>ข้อมูลเดิม: เลขที่ '+esc(h.docNo||'-')+' · หมดอายุ '+esc(vdShort(h.expiry))+(h.note?'<br>หมายเหตุ: '+esc(h.note):'')+(h.fileId?'<br><a href="#" data-vd-hf="'+i+'">📎 เปิดไฟล์ PDF เดิม</a>':'')+'</div>'}).join('');
+  box.innerHTML=rows.map(function(h,i){return '<div class="vd-hist"><b>'+esc(h.type)+' — '+esc(h.vehicle)+'</b> · '+esc(h.reason)+' เมื่อ '+esc(h.at)+' โดย '+esc(h.by)+'<br>ข้อมูลเดิม: เลขที่ '+esc(h.docNo||'-')+' · '+(h.type==='ทะเบียน'?'วันที่จดทะเบียน ':'หมดอายุ ')+esc(vdShort(h.type==='ทะเบียน'?h.registrationDate:h.expiry))+(h.note?'<br>หมายเหตุ: '+esc(h.note):'')+(h.fileId?'<br><a href="#" data-vd-hf="'+i+'">📎 เปิดไฟล์ PDF เดิม</a>':'')+'</div>'}).join('');
   box.querySelectorAll('[data-vd-hf]').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault();vdOpenFile(rows[+a.getAttribute('data-vd-hf')].fileId)})});
 }
 function vdOpenFile(fileId){
