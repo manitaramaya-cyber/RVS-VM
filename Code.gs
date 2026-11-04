@@ -364,9 +364,9 @@ function saveVehicleDoc(payload,adminToken){
       var r1=sh.getLastRow()+1;sh.getRange(r1,5,1,1).setNumberFormat('@');sh.getRange(r1,9,1,1).setNumberFormat('@');sh.getRange(r1,14,1,1).setNumberFormat('@');
       sh.getRange(r1,1,1,14).setValues([[newRec.id,vehicle,type,docNo,expiry,newRec.fileId,newRec.fileName,note,'','','',who,now,newRec.registrationDate]]);
     }else{
-      var fileChanged=!!up;
+      var fileChanged=!!up,registrationDateChanged=type==='ทะเบียน'&&!!existing.registrationDate&&existing.registrationDate!==registrationDate;
       if(mode==='renew'){action='DOC_RENEW';pushHistory(existing,'ต่ออายุ');}
-      else{action='DOC_EDIT';if(fileChanged&&existing.fileId)pushHistory(existing,'เปลี่ยนไฟล์แนบ');}
+      else{action='DOC_EDIT';if((fileChanged&&existing.fileId)||registrationDateChanged)pushHistory(existing,registrationDateChanged?'แก้ไขวันที่จดทะเบียน':'เปลี่ยนไฟล์แนบ');}
       var keepFile=(mode!=='renew'&&!fileChanged);
       newRec={id:existing.id,vehicle:vehicle,type:type,docNo:docNo,expiry:(type==='ทะเบียน'&&existing.type==='ทะเบียน'&&existing.expiry)?existing.expiry:expiry,registrationDate:type==='ทะเบียน'?registrationDate:'',
         fileId:keepFile?existing.fileId:(up?up.id:''),fileName:keepFile?existing.fileName:(up?up.name:''),note:note,
