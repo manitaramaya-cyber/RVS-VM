@@ -1319,6 +1319,15 @@ body.light .dashboard-actions-body .dashboard-doc{border-bottom-color:#dce7f1!im
 .dashboard-actions-body .dashboard-doc{min-height:40px!important}
 @media(max-width:1250px){.quick-panel,.recommendation-panel{height:auto!important;min-height:92px!important}}
 
+
+/* Sidebar user identity aligns with the master reference position */
+.tabs{bottom:230px!important}
+.top-user{bottom:230px!important;min-height:82px!important;justify-content:flex-start!important}
+.top-user span{font-size:11px!important;line-height:1.5!important}
+.top-user span:before{content:"สวัสดีครับ";display:block;color:#eaf4ff;font-weight:500}
+.top-user span:after{content:"● Online";display:block;color:#19c77b;font-size:10px;letter-spacing:.2px}
+@media(max-width:760px){.tabs{bottom:auto!important}.top-user{bottom:auto!important;min-height:0!important}.top-user span:before,.top-user span:after{display:none}}
+
 </style>
 </head>
 <body>
