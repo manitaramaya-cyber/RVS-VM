@@ -1328,6 +1328,11 @@ body.light .dashboard-actions-body .dashboard-doc{border-bottom-color:#dce7f1!im
 .top-user span:after{content:"● Online";display:block;color:#19c77b;font-size:10px;letter-spacing:.2px}
 @media(max-width:760px){.tabs{bottom:auto!important}.top-user{bottom:auto!important;min-height:0!important}.top-user span:before,.top-user span:after{display:none}}
 
+
+/* Prevent nav rail from covering the lower sidebar profile */
+.tabs{bottom:312px!important}
+@media(max-width:760px){.tabs{bottom:auto!important}}
+
 </style>
 </head>
 <body>
