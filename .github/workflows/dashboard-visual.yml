@@ -21,6 +21,18 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Render Dark and Light dashboards
         run: node tests/dashboard-visual/render-dashboard.cjs
+
+      - name: Package Apps Script deployment files
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-vm-v2.1.0-deploy
+          path: |
+            Code.gs
+            Admin.html
+            Calendar.html
+            README.md
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
