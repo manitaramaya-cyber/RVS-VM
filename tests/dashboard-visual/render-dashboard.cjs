@@ -29,6 +29,8 @@ const path = require('node:path');
       if (typeof dashboardRenderCalendar === 'function') dashboardRenderCalendar();
       // Deterministic visual fixtures: browser-only DOM content, no production writes.
       const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+      const userCard = document.getElementById('topUser');
+      if (userCard) { userCard.hidden = false; const userName = document.getElementById('topUserName'); if (userName) userName.textContent = 'สวัสดีครับ ผู้ดูแลระบบ'; }
       set('dashboardFleetTotal','28'); set('dashboardFleetReady','24'); set('dashboardFleetMaint','2'); set('dashboardFleetUnavailable','2');
       set('dashboardFleetReadyPct','85.7% พร้อมใช้งาน'); set('dashboardTodayCount','4'); set('dashboardPendingCount','6');
       const table = document.getElementById('dashboardTodayTable');
