@@ -1302,6 +1302,23 @@ body.light .dashboard-actions-body .dashboard-doc{border-bottom-color:#dce7f1!im
  .command-insights{margin-bottom:16px!important}
 }
 
+
+/* PASS 04 — sidebar profile and final viewport fit */
+.top-user:before{
+ content:"●";display:grid;place-items:center;flex:none;width:48px;height:48px;border-radius:50%;
+ color:#e8f4ff;font-size:28px;background:linear-gradient(145deg,#506b94,#182e51);
+ border:2px solid rgba(181,214,247,.65);box-shadow:0 0 0 4px rgba(70,139,205,.12);
+}
+.top-user span{line-height:1.55!important;flex:1}
+.top-user .logout-btn{display:none!important}
+.quick-panel,.recommendation-panel{height:92px!important;min-height:92px!important}
+.dashboard-footer-grid{margin-bottom:12px!important}
+.quick-panel .dashboard-panel-head{min-height:27px!important}
+.quick-action{min-height:53px!important}
+.dashboard-actions-body .dashboard-request,
+.dashboard-actions-body .dashboard-doc{min-height:40px!important}
+@media(max-width:1250px){.quick-panel,.recommendation-panel{height:auto!important;min-height:92px!important}}
+
 </style>
 </head>
 <body>
