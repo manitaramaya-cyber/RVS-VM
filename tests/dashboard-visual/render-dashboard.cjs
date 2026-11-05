@@ -1,15 +1,16 @@
 const { chromium } = require('playwright');
 const fs = require('node:fs');
+const http = require('node:http');
 const path = require('node:path');
 
 (async () => {
   const html = fs.readFileSync(path.join(process.cwd(), 'Admin.html'), 'utf8');
+  const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(html); });
+  await new Promise(resolve => server.listen(4173, '127.0.0.1', resolve));
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1600, height: 1100 }, deviceScaleFactor: 1 });
   page.on('pageerror', error => console.error('PAGE_ERROR:', error.message));
-  await page.setContent(html, { waitUntil: 'networkidle', timeout: 60000 }).catch(async () => {
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  });
+  await page.goto('http://127.0.0.1:4173', { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(1200);
   const result = await page.evaluate(() => {
     try {
@@ -35,5 +36,6 @@ const path = require('node:path');
   await page.waitForTimeout(250);
   await page.screenshot({ path: 'dashboard-light.png', fullPage: true });
   await browser.close();
+  await new Promise(resolve => server.close(resolve));
   if (!result.ok) process.exitCode = 1;
 })();
