@@ -1,0 +1,45 @@
+name: Dashboard visual verification
+on:
+  push:
+    branches:
+      - feature/v2.1.0-dual-theme-dashboard
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  render-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Render Dark and Light dashboards
+        run: node tests/dashboard-visual/render-dashboard.cjs
+
+      - name: Package Apps Script deployment files
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvs-vm-v2.1.0-deploy
+          path: |
+            Code.gs
+            Admin.html
+            Calendar.html
+            README.md
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-visual-screenshots
+          path: |
+            dashboard-dark.png
+            dashboard-light.png
+          if-no-files-found: error
+          retention-days: 7
