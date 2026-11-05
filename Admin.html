@@ -1252,6 +1252,56 @@ body.light .recommendation-panel p{color:#334c65!important}
  .recommendation-panel{height:auto!important;min-height:100px!important}
 }
 
+
+/* MASTER MATCH PASS 03 — tighten composition and action rows */
+.wrap{padding-left:26px!important;padding-right:24px!important}
+.dashboard-heading{padding-left:88px!important;position:relative!important}
+.dashboard-heading:before{
+ content:"☰";position:absolute;left:0;top:1px;width:54px;height:54px;
+ display:grid;place-items:center;color:#e8f5ff;font:27px/1 Arial,sans-serif;
+ border:1px solid rgba(67,176,247,.55);border-radius:8px;
+ background:linear-gradient(145deg,rgba(7,39,73,.92),rgba(4,23,45,.55));
+ box-shadow:inset -5px 0 rgba(18,135,220,.18);
+}
+.dashboard-toolbar{margin-bottom:22px!important}
+.dashboard-kpis{margin-bottom:26px!important}
+.command-main>.dashboard-panel{height:314px!important}
+.command-main{margin-bottom:17px!important}
+.command-insights{margin-bottom:26px!important}
+.command-insights>.dashboard-panel{height:225px!important}
+.dashboard-footer-grid{margin-bottom:0!important}
+.quick-panel,.recommendation-panel{height:104px!important;min-height:104px!important}
+.quick-panel .dashboard-panel-body{padding-top:3px!important;padding-bottom:7px!important}
+.quick-action{min-height:58px!important}
+.dashboard-actions-body{
+ display:block!important;padding:2px 12px 4px!important;
+}
+.dashboard-actions-body .action-group{display:block!important;margin:0!important;padding:0!important}
+.dashboard-actions-body .dashboard-section-label{display:none!important}
+.dashboard-actions-body .dashboard-request,
+.dashboard-actions-body .dashboard-doc{
+ display:flex!important;align-items:center!important;justify-content:space-between!important;
+ min-height:42px!important;margin:0!important;padding:7px 9px!important;
+ border:0!important;border-bottom:1px solid rgba(95,151,199,.22)!important;
+ border-radius:0!important;background:transparent!important;box-shadow:none!important;
+ font-size:11px!important;line-height:1.35!important;
+}
+.dashboard-actions-body .dashboard-request:last-child,
+.dashboard-actions-body .dashboard-doc:last-child{border-bottom:0!important}
+.dashboard-actions-body .dashboard-request-name{font-size:12px!important;font-weight:600!important}
+.dashboard-actions-body .dashboard-request-meta{font-size:10px!important}
+.dashboard-actions-body .dashboard-request-count{color:#ff655e!important;font-size:12px!important;font-weight:700!important}
+body.light .dashboard-actions-body .dashboard-request,
+body.light .dashboard-actions-body .dashboard-doc{border-bottom-color:#dce7f1!important}
+.recommendation-panel>div:nth-child(2){max-width:61%!important}
+@media(max-width:1250px){
+ .dashboard-heading{padding-left:0!important}
+ .dashboard-heading:before{display:none!important}
+ .dashboard-toolbar{margin-bottom:14px!important}
+ .dashboard-kpis{margin-bottom:16px!important}
+ .command-insights{margin-bottom:16px!important}
+}
+
 </style>
 </head>
 <body>
