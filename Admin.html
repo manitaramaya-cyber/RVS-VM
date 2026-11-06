@@ -804,6 +804,18 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
 .daily-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}
 .daily-toolbar input[type=date]{max-width:190px}
 #dailyText{width:100%;font-family:inherit;font-size:16px;line-height:1.7;background:var(--panel3);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;resize:vertical}
+.daily-blocks{display:grid;gap:12px;margin:10px 0 14px}
+.daily-block{background:var(--panel2);border:1px solid var(--line);border-left:5px solid var(--daily-accent,#5B9BD5);border-radius:10px;padding:13px 14px;min-width:0}
+.daily-block-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.daily-block-title{font-size:15px;font-weight:600;color:var(--ink)}
+.daily-block-copy{font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel3);color:var(--ink);cursor:pointer;font-family:inherit}
+.daily-block-copy:hover{border-color:var(--amber)}
+.daily-block-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.75;color:var(--ink);user-select:text}
+.daily-edit{margin:12px 0}
+.daily-edit summary{cursor:pointer;color:var(--dim);font-size:14px;padding:8px 0}
+.daily-edit[open] summary{margin-bottom:8px}
+.daily-empty{padding:16px;border:1px dashed var(--line);border-radius:8px;color:var(--dim);text-align:center}
+
 .daily-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px}
 .daily-warn{background:rgba(232,139,69,.16);border:1px solid #E58B45;color:var(--ink);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:15px;line-height:1.6}
 .daily-warn[hidden]{display:none}
@@ -1199,7 +1211,11 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
             <button type="button" class="btn secondary" onclick="dailySetDay(1)">พรุ่งนี้</button>
           </div>
           <div class="daily-warn" id="dailyWarn" hidden></div>
-          <textarea id="dailyText" rows="17" spellcheck="false" placeholder="ยังไม่มีรายงาน"></textarea>
+          <div id="dailyBlocks" class="daily-blocks" aria-live="polite"><div class="daily-empty">กำลังสร้างรายงาน...</div></div>
+          <details class="daily-edit">
+            <summary>✏️ แก้ไขข้อความรวมก่อนคัดลอกหรือส่ง LINE</summary>
+            <textarea id="dailyText" rows="12" spellcheck="false" placeholder="ยังไม่มีรายงาน"></textarea>
+          </details>
           <div class="daily-actions">
             <button type="button" class="btn" id="dailyCopyBtn" onclick="dailyCopy()">📋 คัดลอกข้อความ</button>
             <button type="button" class="btn secondary" id="dailySendBtn" onclick="dailySend()">📤 ส่งเข้าไลน์กลุ่มตอนนี้</button>
@@ -3478,6 +3494,7 @@ function dailyGenerate(){
   google.script.run.withSuccessHandler(function(rep){
     if(document.getElementById('dailyDate').value!==key)return;
     ta.value=rep.text||'';
+    dailyRenderBlocks(rep.blocks||[]);
     var has=!!rep.count;
     document.getElementById('dailyCopyBtn').disabled=!has;document.getElementById('dailySendBtn').disabled=!has;
     var msgs=[];
@@ -3491,11 +3508,32 @@ function dailyGenerate(){
     st.textContent=parts.join(' • ');
   }).withFailureHandler(function(err){ta.value='';warn.hidden=false;warn.textContent='สร้างรายงานไม่สำเร็จ: '+((err&&err.message)||err)}).getDailyReport(key,currentAdminToken());
 }
-function dailyCopy(){
-  var ta=document.getElementById('dailyText'),btn=document.getElementById('dailyCopyBtn'),txt=ta.value;if(!txt)return;
-  var done=function(){var o=btn.textContent;btn.textContent='✓ คัดลอกแล้ว';setTimeout(function(){btn.textContent=o},1800)};
-  var fallback=function(){ta.focus();ta.select();try{document.execCommand('copy');done()}catch(e){alert('คัดลอกอัตโนมัติไม่สำเร็จ กรุณาเลือกข้อความในช่องแล้วคัดลอกเอง')}};
+var dailyReportBlocks=[];
+function dailyRenderBlocks(blocks){
+  dailyReportBlocks=Array.isArray(blocks)?blocks:[];
+  var box=document.getElementById('dailyBlocks');if(!box)return;
+  if(!dailyReportBlocks.length){box.innerHTML='<div class="daily-empty">ไม่มีรายการที่พร้อมรายงานในวันที่เลือก</div>';return;}
+  var accents=['#5B9BD5','#9B7EDE','#5FAE7B','#E58B45','#D2685B','#E8B23D'];
+  box.innerHTML=dailyReportBlocks.map(function(t,i){
+    return '<section class="daily-block" style="--daily-accent:'+accents[i%accents.length]+'">'+
+      '<div class="daily-block-head"><div class="daily-block-title">คำขอที่ '+(i+1)+'</div>'+
+      '<button type="button" class="daily-block-copy" onclick="dailyCopyBlock('+i+')">📋 คัดลอกคำขอนี้</button></div>'+
+      '<div class="daily-block-text">'+esc(t)+'</div></section>';
+  }).join('');
+}
+function dailyCopyText(txt,btn){
+  if(!txt)return;
+  var done=function(){if(!btn)return;var old=btn.textContent;btn.textContent='✓ คัดลอกแล้ว';setTimeout(function(){btn.textContent=old},1800)};
+  var fallback=function(){var tmp=document.createElement('textarea');tmp.value=txt;tmp.style.position='fixed';tmp.style.opacity='0';document.body.appendChild(tmp);tmp.select();try{document.execCommand('copy');done()}catch(e){alert('คัดลอกอัตโนมัติไม่สำเร็จ กรุณาเลือกข้อความแล้วคัดลอกเอง')}document.body.removeChild(tmp)};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,fallback);else fallback();
+}
+function dailyCopyBlock(i){
+  var btn=document.querySelectorAll('.daily-block-copy')[i];
+  dailyCopyText(dailyReportBlocks[i],btn);
+}
+function dailyCopy(){
+  var ta=document.getElementById('dailyText'),btn=document.getElementById('dailyCopyBtn');
+  dailyCopyText(ta.value,btn);
 }
 function dailySend(){
   if(dailyBusy)return;
