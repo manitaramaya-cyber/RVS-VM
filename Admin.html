@@ -1316,17 +1316,17 @@ body.light .dashboard-greeting{background:linear-gradient(100deg,#e7f2ff,#f7fbff
         <div class="section-sub" style="margin:4px 0 0;" data-rv-i18n="commandSubtitle">ศูนย์บัญชาการบริหารจัดการยานพาหนะ</div>
       </div>
       <div class="dashboard-toolbar-actions">
-        <div class="dashboard-live-meta"><span id="dashboardDate">—</span><span id="dashboardClock">--:-- น.</span><span class="dashboard-online"><i></i> ออนไลน์</span></div>
+        <div class="dashboard-live-meta"><span id="dashboardDate">—</span><span id="dashboardClock">--:-- น.</span><span class="dashboard-online"><i></i> <span data-rv-i18n="online">ออนไลน์</span></span></div>
         <button type="button" class="btn secondary small" id="dashboardRefresh">↻ รีเฟรช</button>
         <button type="button" class="btn secondary small theme-switch" id="dashboardTheme" aria-label="สลับธีม">☾ โหมดกลางคืน</button><button type="button" class="btn secondary small" id="dashboardLanguage" aria-label="Switch language">TH / EN</button>
       </div>
     </div>
     <section class="dashboard-greeting" aria-label="ข้อความต้อนรับ"><span id="hybridWelcome">สวัสดีครับ คุณกิตติพันธ์ ขอให้เป็นวันที่ดี ทุกอย่างราบรื่นครับ</span></section>
     <section class="dashboard-kpis" aria-label="ภาพรวมสถานะรถ">
-      <article class="dashboard-kpi kpi-blue"><div class="kpi-icon">🚘</div><div><div class="kpi-value" id="dashboardFleetTotal">0</div><div class="kpi-label">รถทั้งหมด</div><div class="kpi-foot">ยานพาหนะในระบบ</div></div></article>
-      <article class="dashboard-kpi kpi-green"><div class="kpi-icon">✓</div><div><div class="kpi-value" id="dashboardFleetReady">0</div><div class="kpi-label">พร้อมใช้งาน</div><div class="kpi-foot" id="dashboardFleetReadyPct">กำลังประมวลผล</div></div></article>
-      <article class="dashboard-kpi kpi-amber"><div class="kpi-icon">🔧</div><div><div class="kpi-value" id="dashboardFleetMaint">0</div><div class="kpi-label">ซ่อมบำรุง / เฝ้าระวัง</div><div class="kpi-foot">รายการจากระบบบำรุงรักษา</div></div></article>
-      <article class="dashboard-kpi kpi-red"><div class="kpi-icon">!</div><div><div class="kpi-value" id="dashboardFleetUnavailable">0</div><div class="kpi-label">ไม่พร้อมใช้</div><div class="kpi-foot">รถที่มีความพร้อมต่ำ</div></div></article>
+      <article class="dashboard-kpi kpi-blue"><div class="kpi-icon">🚘</div><div><div class="kpi-value" id="dashboardFleetTotal">0</div><div class="kpi-label" data-rv-i18n="fleetTotal">รถทั้งหมด</div><div class="kpi-foot">ยานพาหนะในระบบ</div></div></article>
+      <article class="dashboard-kpi kpi-green"><div class="kpi-icon">✓</div><div><div class="kpi-value" id="dashboardFleetReady">0</div><div class="kpi-label" data-rv-i18n="readyVehicles">พร้อมใช้งาน</div><div class="kpi-foot" id="dashboardFleetReadyPct">กำลังประมวลผล</div></div></article>
+      <article class="dashboard-kpi kpi-amber"><div class="kpi-icon">🔧</div><div><div class="kpi-value" id="dashboardFleetMaint">0</div><div class="kpi-label" data-rv-i18n="maintenanceWatch">ซ่อมบำรุง / เฝ้าระวัง</div><div class="kpi-foot">รายการจากระบบบำรุงรักษา</div></div></article>
+      <article class="dashboard-kpi kpi-red"><div class="kpi-icon">!</div><div><div class="kpi-value" id="dashboardFleetUnavailable">0</div><div class="kpi-label" data-rv-i18n="unavailableVehicles">ไม่พร้อมใช้</div><div class="kpi-foot">รถที่มีความพร้อมต่ำ</div></div></article>
     </section>
     <div class="command-grid command-main">
       <section class="dashboard-panel">
@@ -3452,13 +3452,13 @@ function renderDashboard(){
   if(table){
     table.innerHTML=todayItems.length?todayItems.map(function(r){
       var st=getDisplayStatus(r),vehicle=String(r.vehicles||'รอจัดรถ');
-      return '<tr><td><b>'+esc(r.timeGo||'-')+' – '+esc(r.timeBack||'-')+'</b></td><td>'+esc(vehicle)+'</td><td>'+esc(r.name||'-')+'</td><td>'+esc(r.destination||'-')+'</td><td>'+statusBadge(st)+'</td></tr>';
+      var shown=hybridLanguage==='en'?({'รอดำเนินการ':'Pending','อนุมัติแล้ว':'Approved','จัดรถแล้ว':'Vehicle assigned','กำลังใช้งาน':'In use','เสร็จสิ้น':'Completed','ยกเลิก':'Cancelled','ปฏิเสธ':'Rejected'}[st]||st):st;return '<tr><td><b>'+esc(r.timeGo||'-')+' – '+esc(r.timeBack||'-')+'</b></td><td>'+esc(vehicle)+'</td><td>'+esc(r.name||'-')+'</td><td>'+esc(r.destination||'-')+'</td><td>'+statusBadge(shown)+'</td></tr>';
     }).join(''):'<tr><td colspan="5" class="dashboard-empty">วันนี้ไม่มีรายการใช้รถ</td></tr>';
   }
   var chart=document.getElementById('dashboardMonthlyChart');
   if(chart){
     var now=new Date(),months=[];
-    for(var mi=5;mi>=0;mi--){var md=new Date(now.getFullYear(),now.getMonth()-mi,1),key=md.getFullYear()+'-'+String(md.getMonth()+1).padStart(2,'0');months.push({key:key,label:thaiMonths[md.getMonth()],count:requests.filter(function(r){return String(r.dateGo||'').slice(0,7)===key&&getDisplayStatus(r)!=='ยกเลิก'&&getDisplayStatus(r)!=='ปฏิเสธ';}).length});}
+    for(var mi=5;mi>=0;mi--){var md=new Date(now.getFullYear(),now.getMonth()-mi,1),key=md.getFullYear()+'-'+String(md.getMonth()+1).padStart(2,'0');months.push({key:key,label:hybridLanguage==='en'?md.toLocaleDateString('en-GB',{month:'short'}):thaiMonths[md.getMonth()],count:requests.filter(function(r){return String(r.dateGo||'').slice(0,7)===key&&getDisplayStatus(r)!=='ยกเลิก'&&getDisplayStatus(r)!=='ปฏิเสธ';}).length});}
     var max=Math.max.apply(null,months.map(function(x){return x.count;}))||1;
     chart.innerHTML=months.map(function(x){return '<div class="month-bar"><strong>'+x.count+'</strong><div class="month-bar-track"><div class="month-bar-fill" style="height:'+Math.max(3,x.count/max*100)+'%"></div></div><small>'+esc(x.label)+'</small></div>';}).join('');
   }
