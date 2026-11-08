@@ -928,6 +928,20 @@ body.light{--bg:#f3f6fc;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#13
 @media(max-width:900px){.wrap{margin-left:0;padding:18px 16px 40px}.tabs{position:sticky;top:0;bottom:auto;width:100%;height:auto;flex-direction:row;overflow-x:auto;padding:9px 10px;gap:5px}.tabs:before{display:none}.tab{width:auto;flex:none;white-space:nowrap;min-height:40px}.hybrid-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.hybrid-main-grid{grid-template-columns:1fr}.hybrid-hero-art{opacity:.45;width:45%}}
 @media(max-width:600px){.wrap{padding:13px 11px 30px}.hybrid-topbar{align-items:flex-start;flex-direction:column}.hybrid-top-actions{width:100%}.hybrid-hero{min-height:160px;padding:20px}.hybrid-hero-art{right:-8%;width:50%;opacity:.28}.hybrid-hero h1{font-size:25px}.hybrid-kpis{gap:8px}.hybrid-kpi{padding:11px;gap:8px}.hybrid-kpi-icon{width:34px;height:34px;font-size:17px}.hybrid-kpi strong{font-size:23px}.hybrid-kpi span{font-size:11px}.hybrid-main-grid,.hybrid-bottom-grid{grid-template-columns:1fr}.hybrid-insight{grid-column:auto}.hybrid-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.hybrid-action{min-height:88px}.hybrid-schedule-row{grid-template-columns:60px minmax(0,1fr);}.hybrid-schedule-row .hybrid-status{grid-column:2;justify-self:start}.hybrid-footer{flex-direction:column}}
 
+
+body.hybrid-dark{--hy-bg:#0c1727;--hy-surface:#14243a;--hy-ink:#eaf1fb;--hy-muted:#a5b4c9;--hy-line:rgba(255,255,255,.1);--hy-shadow:0 8px 28px rgba(0,0,0,.2);background:var(--hy-bg);color:var(--hy-ink)}
+body.hybrid-dark .hybrid-product,body.hybrid-dark .hybrid-panel-heading h2,body.hybrid-dark .hybrid-task-copy b,body.hybrid-dark .hybrid-schedule-info b,body.hybrid-dark .hybrid-fleet-meta b{color:var(--hy-ink)}
+body.hybrid-dark .hybrid-kpi,body.hybrid-dark .hybrid-panel,body.hybrid-dark .hybrid-quiet{background:#14243a;border-color:var(--hy-line);color:var(--hy-ink)}
+body.hybrid-dark .hybrid-hero{background:linear-gradient(110deg,#1b3454,#1b426c 55%,#214d7b)}
+body.hybrid-dark .hybrid-hero h1{color:#f3f7ff}
+body.hybrid-dark .hybrid-hero p,body.hybrid-dark .hybrid-eyebrow{color:#a8bedb}
+body.hybrid-dark .hybrid-date{background:rgba(255,255,255,.12);color:#eaf1fb}
+body.hybrid-dark .hybrid-task,body.hybrid-dark .hybrid-schedule-row{border-color:var(--hy-line)}
+body.hybrid-dark .hybrid-task-count{background:#203650;color:#d4e0ef}
+body.hybrid-dark .hybrid-schedule-info small,body.hybrid-dark .hybrid-fleet-number span{color:var(--hy-muted)}
+body.hybrid-dark .hybrid-action{filter:brightness(.78) saturate(.85)}
+body.hybrid-dark .hybrid-footer{color:#9aabc2}
+
 </style>
 </head>
 <body>
@@ -3024,7 +3038,7 @@ function renderDashboard(){
   dashboardRenderCalendar();dashboardRenderSelected();dashboardRenderPending();dashboardRenderMultiDay();dashboardRenderConflicts();renderHybridDashboard();
   document.getElementById('dashboardBookingCount').textContent=requests.filter(function(r){return dashboardStatusActive(r);}).length;
 }
-['dashboardPrevMonth','dashboardNextMonth','dashboardToday','dashboardRefresh','dashboardNewRequest','dashboardTheme'].forEach(function(id){var el=document.getElementById(id);if(!el)return;el.addEventListener('click',function(){if(id==='dashboardPrevMonth'){calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()-1,1);renderDashboard();}else if(id==='dashboardNextMonth'){calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()+1,1);renderDashboard();}else if(id==='dashboardToday'){var now=new Date();calendarDate=new Date(now.getFullYear(),now.getMonth(),1);dashboardSelectedKey=dateKey(now);renderDashboard();}else if(id==='dashboardRefresh'){loadRequests(function(){renderDashboard();});}else if(id==='dashboardNewRequest'){var tab=document.querySelector('.tab[data-v="new"]');if(tab)tab.click();}else if(id==='dashboardTheme'){document.body.classList.toggle('light');}});});
+['dashboardPrevMonth','dashboardNextMonth','dashboardToday','dashboardRefresh','dashboardNewRequest','dashboardTheme'].forEach(function(id){var el=document.getElementById(id);if(!el)return;el.addEventListener('click',function(){if(id==='dashboardPrevMonth'){calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()-1,1);renderDashboard();}else if(id==='dashboardNextMonth'){calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()+1,1);renderDashboard();}else if(id==='dashboardToday'){var now=new Date();calendarDate=new Date(now.getFullYear(),now.getMonth(),1);dashboardSelectedKey=dateKey(now);renderDashboard();}else if(id==='dashboardRefresh'){loadRequests(function(){renderDashboard();});}else if(id==='dashboardNewRequest'){var tab=document.querySelector('.tab[data-v="new"]');if(tab)tab.click();}else if(id==='dashboardTheme'){document.body.classList.toggle('hybrid-dark');}});});
 function showDayDetail(key){
   var detail =
     document.getElementById(
