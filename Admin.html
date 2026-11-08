@@ -858,7 +858,7 @@ body{background:var(--hy-bg);color:var(--hy-ink);font-family:'IBM Plex Sans Thai
 .hybrid-top-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .hybrid-live{display:inline-flex;align-items:center;gap:7px;color:#53647a;font-size:12px}
 .hybrid-live i{width:8px;height:8px;background:#18a66d;border-radius:50%;box-shadow:0 0 0 4px rgba(24,166,109,.12)}
-.hybrid-quiet,.hybrid-primary{border:1px solid var(--hy-line);background:#fff;color:var(--hy-ink);padding:9px 13px;border-radius:10px;font:500 13px inherit;cursor:pointer}
+.hybrid-quiet,.hybrid-primary{border:1px solid var(--hy-line);background:#fff;color:var(--hy-ink);padding:9px 13px;border-radius:10px;font:500 13px 'IBM Plex Sans Thai',sans-serif;cursor:pointer}
 .hybrid-primary{background:var(--hy-blue);border-color:var(--hy-blue);color:#fff;font-weight:600}
 .hybrid-hero{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center;min-height:178px;padding:26px 30px;margin-bottom:16px;border-radius:19px;background:linear-gradient(110deg,#eaf2ff 0%,#dce9ff 55%,#c8dcfb 100%);box-shadow:var(--hy-shadow)}
 .hybrid-hero-copy{position:relative;z-index:2;max-width:600px}
@@ -894,7 +894,7 @@ body{background:var(--hy-bg);color:var(--hy-ink);font-family:'IBM Plex Sans Thai
 .hybrid-task-copy small{display:block;margin-top:2px;color:var(--hy-muted);font-size:11px;line-height:1.45}
 .hybrid-task-count{white-space:nowrap;padding:5px 9px;border-radius:999px;background:#f3f6fb;color:#53647a;font-size:11px;font-weight:700}
 .hybrid-task-arrow{color:#9ba9bc;font-size:20px}
-.hybrid-text-link{border:0;background:none;color:#2463d3;font:600 12px inherit;cursor:pointer;padding:9px 0 0}
+.hybrid-text-link{border:0;background:none;color:#2463d3;font:600 12px 'IBM Plex Sans Thai',sans-serif;cursor:pointer;padding:9px 0 0}
 .hybrid-text-link span{font-size:17px;margin-left:4px}
 .hybrid-schedule-list{padding-top:5px}
 .hybrid-schedule-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #edf1f6}
@@ -3006,7 +3006,8 @@ function renderHybridDashboard(){
   if(docAlerts.length)tasks.push({icon:'▤',cls:'purple',title:'เอกสารรถใกล้หมดอายุ',desc:'ตรวจสอบและต่ออายุเอกสารที่เกี่ยวข้อง',count:docAlerts.length,view:'vdocs'});
   if(maintAlerts.length)tasks.push({icon:'⚒',cls:'',title:'ติดตามงานซ่อมบำรุง',desc:'มีรายการแจ้งเตือนที่ต้องติดตาม',count:maintAlerts.length,view:'maint'});
   var taskBox=document.getElementById('hybridTaskList');
-  if(taskBox)taskBox.innerHTML=tasks.length?tasks.map(function(t){return '<button type="button" class="hybrid-task" onclick="hybridNavigate(\\''+t.view+'\\')"><span class="hybrid-task-icon '+t.cls+'">'+t.icon+'</span><span class="hybrid-task-copy"><b>'+esc(t.title)+'</b><small>'+esc(t.desc)+'</small></span><span class="hybrid-task-count">'+t.count+' รายการ</span><span class="hybrid-task-arrow">›</span></button>';}).join(''):'<div class="hybrid-empty">ไม่มีงานค้างที่ต้องดำเนินการในขณะนี้ ✓</div>';
+  if(taskBox)taskBox.innerHTML=tasks.length?tasks.map(function(t){return '<button type="button" class="hybrid-task" data-hybrid-view="'+t.view+'"><span class="hybrid-task-icon '+t.cls+'">'+t.icon+'</span><span class="hybrid-task-copy"><b>'+esc(t.title)+'</b><small>'+esc(t.desc)+'</small></span><span class="hybrid-task-count">'+t.count+' รายการ</span><span class="hybrid-task-arrow">›</span></button>';}).join(''):'<div class="hybrid-empty">ไม่มีงานค้างที่ต้องดำเนินการในขณะนี้ ✓</div>';
+  if(taskBox)taskBox.querySelectorAll('[data-hybrid-view]').forEach(function(b){b.addEventListener('click',function(){hybridNavigate(b.getAttribute('data-hybrid-view'));});});
   var schedule=todays.slice().sort(function(a,b){return String(a.timeGo||'').localeCompare(String(b.timeGo||''));});
   var scheduleBox=document.getElementById('hybridScheduleList');
   if(scheduleBox)scheduleBox.innerHTML=schedule.length?schedule.map(function(r){var st=getDisplayStatus(r),cls=st==='เสร็จสิ้น'?'done':st==='รอดำเนินการ'?'pending':st==='กำลังใช้งาน'?'using':st==='ปฏิเสธ'?'rejected':'';return '<div class="hybrid-schedule-row"><div class="hybrid-time">'+esc(r.timeGo||'—')+(r.timeBack?' – '+esc(r.timeBack):'')+'</div><div class="hybrid-schedule-info"><b>'+esc(r.name||'ไม่ระบุชื่อ')+'</b><small>'+esc(r.destination||'ไม่ระบุปลายทาง')+' · '+esc(r.vehicles||'รอจัดรถ')+'</small></div><span class="hybrid-status '+cls+'">'+esc(st)+'</span></div>';}).join(''):'<div class="hybrid-empty">วันนี้ยังไม่มีรายการใช้รถ</div>';
