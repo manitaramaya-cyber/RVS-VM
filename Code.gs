@@ -100,7 +100,7 @@ function getRequestForPrint(id,adminToken){
 //   LINE_CHANNEL_TOKEN = Channel access token (long-lived) ของ LINE Official Account ที่เปิด Messaging API
 //   LINE_GROUP_ID      = groupId ของกลุ่มไลน์ที่เชิญบอทเข้าไปแล้ว (ขึ้นต้นด้วย C)
 var LINE_TOKEN_PROP_='LINE_CHANNEL_TOKEN',LINE_GROUP_PROP_='LINE_GROUP_ID',LINE_LASTSENT_PROP_='LINE_LAST_SENT_DATE';
-var DAILY_REPORT_STATUSES_=[STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE,STATUS.DONE];
+var DAILY_REPORT_EXCLUDED_STATUSES_=[STATUS.CANCELLED,STATUS.REJECTED];
 function todayKey_(){return Utilities.formatDate(new Date(),'Asia/Bangkok','yyyy-MM-dd');}
 function thaiLongDate_(key){
   var m=String(key||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return String(key||'');
@@ -123,30 +123,30 @@ function reportDriverName_(r){
   return String(r.needDriver||'').trim()==='ต้องการ'?String(r.driver||'').trim():String(r.requestedDriver||'').trim();
 }
 function buildDailyReport_(dateKey){
-  // รายงานเฉพาะคำขอที่ อนุมัติ/จัดรถแล้ว + มีรถที่จัด + มีผู้ขับรถ (ข้อมูลไม่ครบ -> ไม่รายงาน แต่แจ้งเตือนใน warnings)
+  // รายงานทุกคำขอของวันที่เลือก ยกเว้นยกเลิก/ปฏิเสธ แม้ยังไม่อนุมัติหรือยังจัดรถ/คนขับไม่ครบ
   var vehRows=rowsToObjects_(sheet_(SHEETS.VEHICLES));
   var cand=rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).filter(function(r){
-    return r.dateGo===dateKey&&DAILY_REPORT_STATUSES_.indexOf(r.status)>=0;
+    return r.dateGo===dateKey&&DAILY_REPORT_EXCLUDED_STATUSES_.indexOf(r.status)<0;
   }).sort(function(a,b){return String(a.timeGo).localeCompare(String(b.timeGo));});
-  var warnings=[],blocks=[],skipped=0;
+  var warnings=[],blocks=[];
   cand.forEach(function(r){
     var vlist=String(r.vehicles||'').split(',').map(function(x){return vehicleLabel_(x,vehRows);}).filter(Boolean);
-    var drv=reportDriverName_(r),who=r.name+' ('+(r.timeGo||'-')+' น.)',why=[];
-    if(!vlist.length)why.push('ยังไม่ได้จัดรถ');
-    if(!drv)why.push('ยังไม่มีผู้ขับรถ');
-    if(why.length){skipped++;warnings.push('ไม่นำไปรายงาน — '+who+': '+why.join(' / '));return;}
+    var drv=reportDriverName_(r),who=r.name+' ('+(r.timeGo||'-')+' น.)';
     var total=(Number(r.students)||0)+(Number(r.teachers)||0)+(Number(r.others)||0);if(total<=0)total=Number(r.companionCount)||0;
     if(!total)warnings.push(who+': ไม่ระบุจำนวนผู้ร่วมเดินทาง (รายงานเป็น 0 คน)');
     var purpose=String(r.purpose||'').trim(),dest=String(r.destination||'').trim();
     var what=purpose+((dest&&purpose.indexOf(dest)<0)?' ณ '+dest:'');
     var lines=['เวลา '+(r.timeGo||'-')+' น.'];
-    vlist.forEach(function(v){lines.push('🚐'+v);});
-    lines.push('🙎🏻ผู้ขับรถ  '+drv);
+    if(vlist.length)vlist.forEach(function(v){lines.push('🚐'+v);});
+    else lines.push('🚐รอจัดรถ');
+    if(drv)lines.push('🙎🏻ผู้ขับรถ  '+drv);
+    else if(String(r.needDriver||'').trim()==='ต้องการ')lines.push('🙎🏻ผู้ขับรถ  รอจัดผู้ขับรถ');
+    else lines.push('🙎🏻ผู้ขับรถ  ไม่ต้องการผู้ขับรถจากโรงเรียน');
     lines.push('');lines.push('-'+what);lines.push('ผู้ร่วมเดินทาง '+total+' คน');
     blocks.push(lines.join('\n'));
   });
   var text=blocks.length?('แจ้งการใช้รถโรงเรียน\n'+thaiLongDate_(dateKey)+'\n\n'+blocks.join('\n\n')+'\n\n🙏🏻ขอบคุณครับ🙏🏻'):'';
-  return {dateKey:dateKey,dateText:thaiLongDate_(dateKey),count:blocks.length,skippedCount:skipped,warnings:warnings,text:text};
+  return {dateKey:dateKey,dateText:thaiLongDate_(dateKey),count:blocks.length,skippedCount:0,warnings:warnings,blocks:blocks,text:text};
 }
 function lineConfigured_(){var p=PropertiesService.getScriptProperties();return !!(p.getProperty(LINE_TOKEN_PROP_)&&p.getProperty(LINE_GROUP_PROP_));}
 function autoTriggerOn_(){try{return ScriptApp.getProjectTriggers().some(function(t){return t.getHandlerFunction()==='dailyLineReportJob';});}catch(e){return null;}}
@@ -175,7 +175,7 @@ function sendDailyReportToLine(dateKey,text,adminToken){
   var admin=requireAdminSession_(adminToken);
   dateKey=String(dateKey||'').trim()||todayKey_();
   text=String(text||'').trim()||buildDailyReport_(dateKey).text;
-  if(!text)throw new Error('ไม่มีรายการใช้รถที่อนุมัติแล้วในวันที่เลือก จึงไม่ส่งข้อความ');
+  if(!text)throw new Error('ไม่มีรายการใช้รถในวันที่เลือก จึงไม่ส่งข้อความ');
   sendLineText_(text);
   appendAuditLog_('DAILY_REPORT_SENT','',admin.account,'','','',{type:'DAILY_REPORT_SENT',date:dateKey,length:text.length});
   return {ok:true};
