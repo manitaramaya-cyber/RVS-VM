@@ -2909,6 +2909,7 @@ function dashboardRenderCalendar(){
 function dashboardRenderSelected(){
   var box=document.getElementById('dashboardSelectedRequests');if(!box)return;
   if(typeof dashboardRenderSelectedDocs==='function')dashboardRenderSelectedDocs();
+    if(typeof renderHybridDashboard==='function')renderHybridDashboard();
   var d=parseKey(dashboardSelectedKey),items=requests.filter(function(r){return dateRangeContains(r,dashboardSelectedKey);}).sort(function(a,b){return (requestStart(a)||0)-(requestStart(b)||0);});
   document.getElementById('dashboardSelectedDate').textContent=thaiDateLong(dashboardSelectedKey);
   document.getElementById('dashboardSelectedCount').textContent=items.length;
