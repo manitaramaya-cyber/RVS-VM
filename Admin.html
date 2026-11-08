@@ -1428,68 +1428,6 @@ body.light .dashboard-greeting{background:linear-gradient(100deg,#e7f2ff,#f7fbff
       🧾 Log
     </button>
   </div>
-  <div class="view active" id="v-dashboard">
-    <section class="hybrid-topbar">
-      <div class="hybrid-product">RVS-VM V.2.1.0</div>
-      <div class="hybrid-top-actions">
-        <span class="hybrid-live"><i></i> <span data-hyi18n="online">ระบบออนไลน์</span></span>
-        <button type="button" class="hybrid-quiet" id="dashboardRefresh" data-hyi18n="refresh">↻ รีเฟรช</button>
-        <button type="button" class="hybrid-primary" id="dashboardNewRequest" data-hyi18n="newRequest">＋ สร้างคำขอ</button>
-        <button type="button" class="hybrid-quiet" id="dashboardTheme" aria-label="Toggle day and night mode">☾ Night mode</button><button type="button" class="hybrid-quiet" id="dashboardLanguage" aria-label="Switch language">TH / EN</button>
-      </div>
-    </section>
-    <section class="hybrid-hero">
-      <div class="hybrid-hero-copy">
-        <h1 id="hybridWelcome" data-hyi18n="greeting">สวัสดีครับ คุณกิตติพันธ์ ขอให้เป็นวันที่ดี ทุกอย่างราบรื่นครับ</h1>
-      </div>
-      <div class="hybrid-hero-art" aria-hidden="true"><div class="hybrid-orbit"></div><div class="hybrid-car">🚐</div><div class="hybrid-art-caption">SAFE JOURNEY<br><b>SMART MANAGEMENT</b></div></div>
-    </section>
-    <section class="hybrid-kpis" aria-label="สรุปภาพรวม">
-      <article class="hybrid-kpi kpi-blue"><div class="hybrid-kpi-icon">🚘</div><div><span data-hyi18n="totalVehicles">รถทั้งหมด</span><strong id="hybridTotalVehicles">—</strong><small>Vehicles in fleet</small></div><b class="hybrid-kpi-arrow">↗</b></article>
-      <article class="hybrid-kpi kpi-green"><div class="hybrid-kpi-icon">◷</div><div><span data-hyi18n="todayTrips">กำหนดใช้รถวันนี้</span><strong id="hybridTodayTrips">—</strong><small>Today's trips</small></div><b class="hybrid-kpi-arrow">↗</b></article>
-      <article class="hybrid-kpi kpi-amber"><div class="hybrid-kpi-icon">✓</div><div><span data-hyi18n="pending">รออนุมัติ</span><strong id="hybridPendingApprovals">—</strong><small>Pending approvals</small></div><b class="hybrid-kpi-arrow">↗</b></article>
-      <article class="hybrid-kpi kpi-rose"><div class="hybrid-kpi-icon">!</div><div><span data-hyi18n="alerts">รายการแจ้งเตือน</span><strong id="hybridAlertCount">—</strong><small>Needs attention</small></div><b class="hybrid-kpi-arrow">↗</b></article>
-    </section>
-    <section class="hybrid-main-grid">
-      <article class="hybrid-panel hybrid-tasks">
-        <div class="hybrid-panel-heading"><div><span class="hybrid-eyebrow">WORK QUEUE</span><h2 data-hyi18n="workQueue">งานที่ต้องจัดการ</h2></div><span class="hybrid-counter" id="hybridTaskTotal">0</span></div>
-        <div id="hybridTaskList" class="hybrid-task-list"><div class="hybrid-loading">กำลังโหลดงาน...</div></div>
-        <button type="button" class="hybrid-text-link" onclick="hybridNavigate('list')">ดูรายการคำขอทั้งหมด <span>→</span></button>
-      </article>
-      <article class="hybrid-panel hybrid-schedule">
-        <div class="hybrid-panel-heading"><div><span class="hybrid-eyebrow">LIVE SCHEDULE</span><h2 data-hyi18n="todaySchedule">ตารางใช้รถวันนี้</h2></div><button type="button" class="hybrid-text-link" onclick="hybridNavigate('calendar')">ปฏิทิน <span>→</span></button></div>
-        <div id="hybridScheduleList" class="hybrid-schedule-list"><div class="hybrid-loading">กำลังโหลดตาราง...</div></div>
-      </article>
-    </section>
-    <section class="hybrid-bottom-grid">
-      <article class="hybrid-panel hybrid-actions">
-        <div class="hybrid-panel-heading"><div><span class="hybrid-eyebrow">SHORTCUTS</span><h2 data-hyi18n="shortcuts">ทางลัดการทำงาน</h2></div></div>
-        <div class="hybrid-action-grid">
-          <button type="button" class="hybrid-action action-blue" onclick="hybridNavigate('new')"><span>＋</span><b data-hyi18n="createRequest">สร้างคำขอใหม่</b><small>New request</small></button>
-          <button type="button" class="hybrid-action action-green" onclick="hybridNavigate('list')"><span>✓</span><b data-hyi18n="approveManage">อนุมัติ / จัดการ</b><small>Requests</small></button>
-          <button type="button" class="hybrid-action action-purple" onclick="hybridNavigate('calendar')"><span>▦</span><b data-hyi18n="viewCalendar">ดูปฏิทิน</b><small>Schedule</small></button>
-          <button type="button" class="hybrid-action action-orange" onclick="hybridNavigate('maint')"><span>⚒</span><b data-hyi18n="maintenance">ซ่อมบำรุง</b><small>Maintenance</small></button>
-        </div>
-      </article>
-      <article class="hybrid-panel hybrid-fleet">
-        <div class="hybrid-panel-heading"><div><span class="hybrid-eyebrow">FLEET STATUS</span><h2 data-hyi18n="fleetStatus">การใช้รถขณะนี้</h2></div><span class="hybrid-live"><i></i> Live</span></div>
-        <div class="hybrid-fleet-number"><strong id="hybridInUse">0</strong><span data-hyi18n="vehiclesInUse">คันกำลังใช้งาน</span></div>
-        <div class="hybrid-meter"><i id="hybridUsageMeter"></i></div>
-        <div class="hybrid-fleet-meta"><span><span data-hyi18n="fleetTotal">รถทั้งหมด</span> <b id="hybridFleetTotal">0</b> <span data-hyi18n="units">คัน</span></span><span><span data-hyi18n="notInUse">ไม่ได้ใช้งานขณะนี้</span> <b id="hybridNotInUse">0</b> <span data-hyi18n="units">คัน</span></span></div>
-        <button type="button" class="hybrid-text-link" onclick="hybridNavigate('fleet')">ดูข้อมูลรถทั้งหมด <span>→</span></button>
-      </article>
-      <article class="hybrid-insight">
-        <div class="hybrid-insight-icon">✦</div><div class="hybrid-eyebrow">SYSTEM INSIGHTS</div><h2 data-hyi18n="insights">สิ่งที่ควรติดตาม</h2>
-        <div id="hybridInsightList"><div class="hybrid-loading">กำลังตรวจสอบข้อมูล...</div></div>
-      </article>
-    </section>
-    <div class="hybrid-footer"><span data-hyi18n="footer">RVS-VM · Vehicle Management System</span><span>Safe Journey. Smart Management.</span></div>
-    <div class="hybrid-legacy" aria-hidden="true">
-      <button id="dashboardPrevMonth" type="button"></button><button id="dashboardNextMonth" type="button"></button>
-      <span id="dashboardBookingCount">0</span><span id="dashboardSelectedCount">0</span><span id="dashboardSelectedDate">-</span><span id="dashboardDocWindow">30</span><span id="dashboardPendingCount">0</span>
-      <div id="dashboardMonths"></div><div id="dashboardConflicts"></div><div id="dashboardSelectedDocs"></div><div id="dashboardSelectedRequests"></div><div id="dashboardDocAlerts"></div><div id="dashboardMaintAlerts"></div><div id="dashboardPending"></div><div id="dashboardMultiDay"></div>
-    </div>
-  </div>
   <div class="view" id="v-new">
     <div class="card">
       <div class="section-title">
