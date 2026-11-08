@@ -37,8 +37,9 @@ function loginAdmin(account,accessCode){
   var session={account:account,role:cfg.role,issuedAt:new Date().toISOString()};
   cache.put(ADMIN_SESSION_PREFIX_+token,JSON.stringify(session),ADMIN_SESSION_TTL_SECONDS_);
   appendAuditLog_('ADMIN_LOGIN','',account,'','','',{type:'ADMIN_LOGIN',account:account,role:cfg.role});
-  return {ok:true,token:token,admin:{account:account,role:cfg.role,displayName:account},expiresInSeconds:ADMIN_SESSION_TTL_SECONDS_};
+  return {ok:true,token:token,admin:{account:account,role:cfg.role,displayName:adminDisplayName_(account)},expiresInSeconds:ADMIN_SESSION_TTL_SECONDS_};
 }
+function adminDisplayName_(account){return String(account||'')==='Admin01'?'Mr. Kittipun Mos S.':'เจ้าหน้าที่งานยานพาหนะ';}
 function getAdminSession(token){return {ok:true,admin:getAdminSession_(token)};}
 function logoutAdmin(token){
   token=String(token||'').trim();var cache=CacheService.getScriptCache(),raw=token?cache.get(ADMIN_SESSION_PREFIX_+token):null;
@@ -49,7 +50,7 @@ function getAdminSession_(token){
   var raw=CacheService.getScriptCache().get(ADMIN_SESSION_PREFIX_+token);if(!raw)throw new Error('เซสชันผู้ดูแลหมดอายุ กรุณาเข้าสู่ระบบใหม่');
   var session;try{session=JSON.parse(raw);}catch(e){throw new Error('เซสชันผู้ดูแลไม่ถูกต้อง');}
   var cfg=ADMIN_ACCOUNTS_[session.account];if(!cfg||cfg.role!==session.role)throw new Error('บัญชีนี้ไม่มีสิทธิ์ผู้ดูแล');
-  return {account:session.account,role:session.role,displayName:session.account};
+  return {account:session.account,role:session.role,displayName:adminDisplayName_(session.account)};
 }
 function requireAdminSession_(token,permission){
   var admin=getAdminSession_(token);
