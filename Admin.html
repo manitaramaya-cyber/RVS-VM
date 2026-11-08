@@ -3512,7 +3512,7 @@ var dailyReportBlocks=[];
 function dailyRenderBlocks(blocks){
   dailyReportBlocks=Array.isArray(blocks)?blocks:[];
   var box=document.getElementById('dailyBlocks');if(!box)return;
-  if(!dailyReportBlocks.length){box.innerHTML='<div class="daily-empty">ไม่มีรายการที่พร้อมรายงานในวันที่เลือก</div>';return;}
+  if(!dailyReportBlocks.length){box.innerHTML='<div class="daily-empty">ไม่มีคำขอใช้รถในวันที่เลือก</div>';return;}
   var accents=['#5B9BD5','#9B7EDE','#5FAE7B','#E58B45','#D2685B','#E8B23D'];
   box.innerHTML=dailyReportBlocks.map(function(t,i){
     return '<section class="daily-block" style="--daily-accent:'+accents[i%accents.length]+'">'+
