@@ -942,6 +942,52 @@ body.hybrid-dark .hybrid-schedule-info small,body.hybrid-dark .hybrid-fleet-numb
 body.hybrid-dark .hybrid-action{filter:brightness(.78) saturate(.85)}
 body.hybrid-dark .hybrid-footer{color:#9aabc2}
 
+
+/* V2.1.0 dashboard readability and compact greeting refinement */
+.tabs:before{content:'RVS-VM V.2.1.0';white-space:normal;font-size:22px;line-height:1.25;letter-spacing:.2px;padding:12px 14px 18px;margin-bottom:12px}
+.hybrid-topbar .hybrid-product{font:700 21px/1.3 'Prompt',sans-serif;color:#f8fbff;letter-spacing:.25px}
+.hybrid-hero{min-height:0;padding:18px 24px;margin-bottom:14px;border-radius:14px}
+.hybrid-hero-copy{max-width:100%;width:100%}
+.hybrid-hero h1{font:600 22px/1.5 'IBM Plex Sans Thai',sans-serif;color:#102746;margin:0;letter-spacing:0}
+.hybrid-hero-art{width:20%;opacity:.55}
+.hybrid-car{font-size:56px}
+.hybrid-kpi span{font-size:14px;color:#465a73;font-weight:500;line-height:1.45}
+.hybrid-kpi small{font-size:12px;color:#52647a}
+.hybrid-kpi strong{font-size:30px}
+.hybrid-panel-heading h2,.hybrid-insight h2{font-size:20px}
+.hybrid-eyebrow{font-size:12px;letter-spacing:.7px;font-weight:700;color:#526783}
+.hybrid-task-copy b{font-size:15px}
+.hybrid-task-copy small{font-size:13px;color:#52647a}
+.hybrid-task-count,.hybrid-status{font-size:12px}
+.hybrid-time{font-size:14px}
+.hybrid-schedule-info b{font-size:15px}
+.hybrid-schedule-info small{font-size:13px;color:#52647a}
+.hybrid-action b{font-size:14px}
+.hybrid-action small{font-size:12px}
+.hybrid-fleet-number span,.hybrid-fleet-meta{font-size:13px}
+.hybrid-insight-item,.hybrid-insight-item b{font-size:14px}
+.hybrid-loading,.hybrid-empty{font-size:14px}
+.hybrid-footer{font-size:12px}
+.hybrid-quiet,.hybrid-primary{font-size:14px;min-height:40px}
+body.hybrid-dark .hybrid-hero{background:linear-gradient(110deg,#203a59 0%,#1b304b 58%,#172a42 100%)}
+body.hybrid-dark .hybrid-hero h1{color:#f5f8ff}
+body.hybrid-dark .hybrid-hero h1 em{color:#8db8ff}
+body.hybrid-dark .hybrid-kpi span,body.hybrid-dark .hybrid-kpi small,
+body.hybrid-dark .hybrid-task-copy small,body.hybrid-dark .hybrid-schedule-info small,
+body.hybrid-dark .hybrid-fleet-number span,body.hybrid-dark .hybrid-fleet-meta{color:#c4d0df}
+body.hybrid-dark .hybrid-eyebrow{color:#b9cbe3}
+body.hybrid-dark .hybrid-panel-heading h2{color:#f2f6fc}
+body.hybrid-dark .hybrid-task{border-bottom-color:rgba(220,232,248,.14)}
+body.hybrid-dark .hybrid-schedule-row{border-bottom-color:rgba(220,232,248,.14)}
+body.hybrid-dark .hybrid-task-count{background:#30445e;color:#e6edf7}
+body.hybrid-dark .hybrid-status{background:#263e5d;color:#cfe0ff}
+body.hybrid-dark .hybrid-status.done{background:#1c493c;color:#a9e7ca}
+body.hybrid-dark .hybrid-status.pending{background:#574322;color:#ffe0a1}
+body.hybrid-dark .hybrid-status.using{background:#593923;color:#ffd0a8}
+body.hybrid-dark .hybrid-status.rejected{background:#592d39;color:#ffc0ca}
+body.light .tabs:before{color:#17304d;border-bottom-color:rgba(23,48,77,.18)}
+@media(max-width:600px){.hybrid-hero{padding:15px 17px}.hybrid-hero h1{font-size:19px;line-height:1.45}.hybrid-hero-art{opacity:.18}.hybrid-topbar .hybrid-product{font-size:19px}}
+
 </style>
 </head>
 <body>
@@ -991,7 +1037,7 @@ body.hybrid-dark .hybrid-footer{color:#9aabc2}
   </div>
   <div class="view active" id="v-dashboard">
     <section class="hybrid-topbar">
-      <div><div class="hybrid-eyebrow">RVS-VM / VEHICLE OPERATIONS</div><div class="hybrid-product">Vehicle Operations Workspace</div></div>
+      <div class="hybrid-product">RVS-VM V.2.1.0</div>
       <div class="hybrid-top-actions">
         <span class="hybrid-live"><i></i> <span data-hyi18n="online">ระบบออนไลน์</span></span>
         <button type="button" class="hybrid-quiet" id="dashboardRefresh" data-hyi18n="refresh">↻ รีเฟรช</button>
@@ -1001,10 +1047,7 @@ body.hybrid-dark .hybrid-footer{color:#9aabc2}
     </section>
     <section class="hybrid-hero">
       <div class="hybrid-hero-copy">
-        <div class="hybrid-eyebrow" id="hybridWelcome">YOUR OPERATIONS AT A GLANCE</div>
-        <h1 data-hyi18n-html="heroTitle">จัดการการเดินทาง<br>ให้ทุกอย่าง <em>เดินหน้า</em></h1>
-        <p data-hyi18n="heroDesc">ภาพรวมการใช้รถ งานที่ต้องดำเนินการ และสถานะกองยานพาหนะในที่เดียว</p>
-        <div class="hybrid-date" id="hybridTodayLabel">วันนี้</div>
+        <h1 id="hybridWelcome" data-hyi18n="greeting">สวัสดีครับ คุณกิตติพันธ์ ขอให้เป็นวันที่ดี ทุกอย่างราบรื่นครับ</h1>
       </div>
       <div class="hybrid-hero-art" aria-hidden="true"><div class="hybrid-orbit"></div><div class="hybrid-car">🚐</div><div class="hybrid-art-caption">SAFE JOURNEY<br><b>SMART MANAGEMENT</b></div></div>
     </section>
@@ -1447,7 +1490,7 @@ window.addEventListener('unhandledrejection',function(e){show('Promise: '+((e.re
 const ADMIN_TOKEN_KEY='rvsVmAdminSessionToken';
 let adminSession=null;
 function currentAdminToken(){return sessionStorage.getItem(ADMIN_TOKEN_KEY)||''}
-function applyAdminSession(admin){adminSession=admin;var welcome=document.getElementById('hybridWelcome');if(welcome)welcome.textContent=admin.account==='Admin01'?'WELCOME, MR. KITTIPUN MOS S.':'ยินดีต้อนรับ เจ้าหน้าที่งานยานพาหนะ';document.getElementById('authOverlay').style.display='none';applyHybridLanguage();document.getElementById('authBadge').hidden=false;try{var tu=document.getElementById('topUser');tu.hidden=false;document.getElementById('topUserName').textContent=admin.displayName+' • '+(admin.role==='SUPERADMIN'?'SAdmin':'Admin')}catch(e){}document.getElementById('authBadgeName').textContent=admin.displayName+' • '+(admin.role==='SUPERADMIN'?'SAdmin':'Admin');loadResources(function(errors){if(errors&&errors.length){alert('โหลดข้อมูลระบบไม่สำเร็จ: '+errors.join(' | '));return;}loadRequests();if(typeof loadDocAlerts==='function')loadDocAlerts();});}
+function applyAdminSession(admin){adminSession=admin;var welcome=document.getElementById('hybridWelcome');if(welcome)welcome.textContent='สวัสดีครับ คุณกิตติพันธ์ ขอให้เป็นวันที่ดี ทุกอย่างราบรื่นครับ';document.getElementById('authOverlay').style.display='none';applyHybridLanguage();document.getElementById('authBadge').hidden=false;try{var tu=document.getElementById('topUser');tu.hidden=false;document.getElementById('topUserName').textContent=admin.displayName+' • '+(admin.role==='SUPERADMIN'?'SAdmin':'Admin')}catch(e){}document.getElementById('authBadgeName').textContent=admin.displayName+' • '+(admin.role==='SUPERADMIN'?'SAdmin':'Admin');loadResources(function(errors){if(errors&&errors.length){alert('โหลดข้อมูลระบบไม่สำเร็จ: '+errors.join(' | '));return;}loadRequests();if(typeof loadDocAlerts==='function')loadDocAlerts();});}
 function showAdminLogin(message){adminSession=null;document.getElementById('authOverlay').style.display='flex';document.getElementById('authBadge').hidden=true;try{document.getElementById('topUser').hidden=true}catch(e){}document.getElementById('loginError').textContent=message||''}
 function loginAdminAccount(e){e.preventDefault();const account=document.getElementById('loginAccount').value,code=document.getElementById('loginCode').value,btn=document.getElementById('loginBtn');document.getElementById('loginError').textContent='';btn.disabled=true;btn.textContent='กำลังตรวจสอบ...';google.script.run.withSuccessHandler(res=>{btn.disabled=false;btn.textContent='เข้าสู่ระบบ';sessionStorage.setItem(ADMIN_TOKEN_KEY,res.token);document.getElementById('loginCode').value='';applyAdminSession(res.admin)}).withFailureHandler(err=>{btn.disabled=false;btn.textContent='เข้าสู่ระบบ';document.getElementById('loginError').textContent=(err&&err.message)||String(err)}).loginAdmin(account,code)}
 function logoutAdminAccount(){const token=currentAdminToken();sessionStorage.removeItem(ADMIN_TOKEN_KEY);google.script.run.withSuccessHandler(()=>{}).withFailureHandler(()=>{}).logoutAdmin(token);requests=[];resourcesReady=false;showAdminLogin('ออกจากระบบแล้ว กรุณาเข้าสู่ระบบใหม่');document.getElementById('loginCode').value='';try{document.getElementById('loginAccount').value=''}catch(e){}}
@@ -3001,7 +3044,7 @@ function dashboardRenderConflicts(){
 
 var hybridLanguage='th';
 var hybridNavLabels={"dashboard":["◫ Dashboard","◫ Dashboard"],"new":["＋ บันทึกคำขอใหม่","＋ New Request"],"list":["📋 จัดรถ","📋 Vehicle Allocation"],"calendar":["📅 ปฏิทิน","📅 Calendar"],"vdocs":["📄 เอกสารรถ","📄 Vehicle Documents"],"maint":["🔧 ซ่อมบำรุง","🔧 Maintenance"],"fleet":["🅿️ ลานจอดรถ","🅿️ Fleet Parking"],"daily":["📣 สรุปประจำวัน","📣 Daily Summary"],"feedback":["⭐ ดูความพึงพอใจ","⭐ Feedback"],"report":["🧾 Log","🧾 Activity Log"]};
-var hybridTranslations={"online":["ระบบออนไลน์","System online"],"refresh":["↻ รีเฟรช","↻ Refresh"],"newRequest":["＋ สร้างคำขอ","＋ New request"],"heroTitle":["จัดการการเดินทาง<br>ให้ทุกอย่าง <em>เดินหน้า</em>","Manage every journey<br>and keep things <em>moving</em>"],"heroDesc":["ภาพรวมการใช้รถ งานที่ต้องดำเนินการ และสถานะกองยานพาหนะในที่เดียว","Your vehicle operations, pending actions and fleet status — all in one place."],"totalVehicles":["รถทั้งหมด","Total vehicles"],"todayTrips":["กำหนดใช้รถวันนี้","Today's trips"],"pending":["รออนุมัติ","Pending approvals"],"alerts":["รายการแจ้งเตือน","Alerts"],"workQueue":["งานที่ต้องจัดการ","Action required"],"todaySchedule":["ตารางใช้รถวันนี้","Today's schedule"],"shortcuts":["ทางลัดการทำงาน","Quick actions"],"fleetStatus":["การใช้รถขณะนี้","Fleet status"],"insights":["สิ่งที่ควรติดตาม","Things to watch"],"createRequest":["สร้างคำขอใหม่","Create request"],"approveManage":["อนุมัติ / จัดการ","Approve / manage"],"viewCalendar":["ดูปฏิทิน","View calendar"],"maintenance":["ซ่อมบำรุง","Maintenance"],"vehiclesInUse":["คันกำลังใช้งาน","vehicles in use"],"fleetTotal":["รถทั้งหมด","Total fleet"],"units":["คัน","vehicles"],"notInUse":["ไม่ได้ใช้งานขณะนี้","Not in use"],"footer":["RVS-VM · Vehicle Management System","RVS-VM · Vehicle Management System"]};
+var hybridTranslations={"online":["ระบบออนไลน์","System online"],"refresh":["↻ รีเฟรช","↻ Refresh"],"newRequest":["＋ สร้างคำขอ","＋ New request"],"greeting":["สวัสดีครับ คุณกิตติพันธ์ ขอให้เป็นวันที่ดี ทุกอย่างราบรื่นครับ","Hello, Khun Kittiphan. Have a wonderful and smooth day."],"totalVehicles":["รถทั้งหมด","Total vehicles"],"todayTrips":["กำหนดใช้รถวันนี้","Today's trips"],"pending":["รออนุมัติ","Pending approvals"],"alerts":["รายการแจ้งเตือน","Alerts"],"workQueue":["งานที่ต้องจัดการ","Action required"],"todaySchedule":["ตารางใช้รถวันนี้","Today's schedule"],"shortcuts":["ทางลัดการทำงาน","Quick actions"],"fleetStatus":["การใช้รถขณะนี้","Fleet status"],"insights":["สิ่งที่ควรติดตาม","Things to watch"],"createRequest":["สร้างคำขอใหม่","Create request"],"approveManage":["อนุมัติ / จัดการ","Approve / manage"],"viewCalendar":["ดูปฏิทิน","View calendar"],"maintenance":["ซ่อมบำรุง","Maintenance"],"vehiclesInUse":["คันกำลังใช้งาน","vehicles in use"],"fleetTotal":["รถทั้งหมด","Total fleet"],"units":["คัน","vehicles"],"notInUse":["ไม่ได้ใช้งานขณะนี้","Not in use"],"footer":["RVS-VM · Vehicle Management System","RVS-VM · Vehicle Management System"]};
 function applyHybridLanguage(){
   var en=hybridLanguage==='en';
   document.querySelectorAll('[data-hyi18n]').forEach(function(el){var k=el.getAttribute('data-hyi18n'),v=hybridTranslations[k];if(v)el.textContent=v[en?1:0];});
@@ -3010,7 +3053,7 @@ function applyHybridLanguage(){
   var lang=document.getElementById('dashboardLanguage');if(lang)lang.textContent=en?'EN / TH':'TH / EN';
   var theme=document.getElementById('dashboardTheme');if(theme)theme.textContent=document.body.classList.contains('hybrid-dark')?(en?'☀ Day mode':'☀ โหมดกลางวัน'):(en?'☾ Night mode':'☾ โหมดกลางคืน');
   var date=document.getElementById('hybridTodayLabel');if(date){var d=new Date();date.textContent=d.toLocaleDateString(en?'en-GB':'th-TH',{weekday:'long',day:'numeric',month:'long',year:'numeric'});}
-  var welcome=document.getElementById('hybridWelcome');if(welcome&&adminSession)welcome.textContent=adminSession.account==='Admin01'?'WELCOME, MR. KITTIPUN MOS S.':(en?'WELCOME, VEHICLE ADMINISTRATION OFFICER':'ยินดีต้อนรับ เจ้าหน้าที่งานยานพาหนะ');
+  var welcome=document.getElementById('hybridWelcome');if(welcome)welcome.textContent=en?'Hello, Khun Kittiphan. Have a wonderful and smooth day.':'สวัสดีครับ คุณกิตติพันธ์ ขอให้เป็นวันที่ดี ทุกอย่างราบรื่นครับ';
   if(typeof renderHybridDashboard==='function')renderHybridDashboard();
 }
 
