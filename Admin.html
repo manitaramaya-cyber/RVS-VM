@@ -280,12 +280,10 @@ textarea{
   flex-direction:column;
   gap:10px;
 }
-.request-card{
-  background:var(--panel2);
-  border:1px solid var(--line);
-  border-radius:8px;
-  padding:15px;
-}
+.request-card{background:var(--panel2);border:1px solid var(--line);border-left:5px solid var(--amber);border-radius:8px;padding:15px}
+.request-list .request-card:nth-child(6n+2){border-left-color:#5B9BD5}.request-list .request-card:nth-child(6n+3){border-left-color:#9B7EDE}.request-list .request-card:nth-child(6n+4){border-left-color:#5FAE7B}.request-list .request-card:nth-child(6n+5){border-left-color:#E58B45}.request-list .request-card:nth-child(6n){border-left-color:#D2685B}
+.driver-duty-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:9px}.driver-duty-grid label{font-size:12px}.driver-duty-grid input{font-size:14px;padding:7px}.request-admin-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}.request-admin-actions .btn{font-size:13px;padding:7px 10px}.btn.edit-request{background:#E8B23D;color:#17232b}.btn.delete-request{background:#C62828;color:#fff}.btn.complete-request{background:#1769AA;color:#fff}.btn.print-request{background:#526B78;color:#fff}
+.edit-request-overlay{position:fixed;inset:0;z-index:10010;background:rgba(4,10,14,.78);display:flex;align-items:center;justify-content:center;padding:16px}.edit-request-modal{width:min(900px,100%);max-height:92vh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 18px 60px rgba(0,0,0,.45)}.edit-request-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.edit-request-grid .field{margin:0}.edit-request-grid .full{grid-column:1/-1}.edit-request-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.edit-request-modal h2{margin:0 0 5px;font-size:20px}@media(max-width:700px){.driver-duty-grid{grid-template-columns:1fr 1fr}.edit-request-grid{grid-template-columns:1fr}.edit-request-grid .full{grid-column:auto}}
 .request-top{
   display:flex;
   justify-content:space-between;
@@ -2248,17 +2246,8 @@ function renderRequests(){
       '</div>';
     return;
   }
-  var sorted =
-    requests.slice().sort(function(a,b){
-      var da =
-        requestStart(a);
-      var db =
-        requestStart(b);
-      if(!da && !db) return 0;
-      if(!da) return 1;
-      if(!db) return -1;
-      return db - da;
-    });
+  var todayKey=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0')+'-'+String(new Date().getDate()).padStart(2,'0');
+  var sorted=requests.slice().sort(function(a,b){var ad=String(a.dateGo||''),bd=String(b.dateGo||''),ap=ad<todayKey,bp=bd<todayKey;if(ap!==bp)return ap?1:-1;if(!ap)return ad.localeCompare(bd)||String(a.timeGo||'').localeCompare(String(b.timeGo||''));return bd.localeCompare(ad)||String(b.timeGo||'').localeCompare(String(a.timeGo||''));});
   list.innerHTML =
     sorted.map(function(r){
       var displayStatus =
@@ -2317,17 +2306,7 @@ function renderRequests(){
       if(needsDriver){
         var dnames = drivers.slice();
         if(r.driver && dnames.indexOf(r.driver) < 0){ dnames.push(r.driver); }
-        driverBlock =
-          '<div>' +
-            '<label>พนักงานขับรถ</label>' +
-            '<select class="driverSel" data-prev="' + esc(r.driver || '') + '">' +
-              '<option value="">— เลือกพนักงานขับรถ —</option>' +
-              dnames.map(function(n){
-                return '<option value="' + esc(n) + '"' + (n === r.driver ? ' selected' : '') + '>' + esc(n) + '</option>';
-              }).join('') +
-            '</select>' +
-            (driversError ? '<div class="drv-hint" style="color:#F0A79E">' + esc(driversError) + '</div>' : '') +
-          '</div>';
+        driverBlock='<div><label>พนักงานขับรถ</label><select class="driverSel" data-prev="'+esc(r.driver||'')+'"><option value="">— เลือกพนักงานขับรถ —</option>'+dnames.map(function(n){return '<option value="'+esc(n)+'"'+(n===r.driver?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select><div class="driver-duty-grid"><div><label>วันที่เริ่มขับ</label><input type="date" class="driverStartDate" value="'+esc(r.driverStartDate||r.dateGo||'')+'"></div><div><label>เวลาเริ่ม</label><input type="time" class="driverStartTime" value="'+esc(r.driverStartTime||r.timeGo||'')+'"></div><div><label>วันที่สิ้นสุด</label><input type="date" class="driverEndDate" value="'+esc(r.driverEndDate||r.dateBack||r.dateGo||'')+'"></div><div><label>เวลาสิ้นสุด</label><input type="time" class="driverEndTime" value="'+esc(r.driverEndTime||r.timeBack||r.timeGo||'')+'"></div></div>'+(driversError?'<div class="drv-hint" style="color:#F0A79E">'+esc(driversError)+'</div>':'')+'</div>';
       }
       return (
         '<div class="request-card" data-id="' +
@@ -2404,9 +2383,7 @@ function renderRequests(){
                 '</button>' +
               '</div>' +
             '</div>' +
-            '<div class="conflict-area">' +
-              conflictHint +
-            '</div>' +
+            '<div class="conflict-area">'+conflictHint+'</div><div class="request-admin-actions"><button type="button" class="btn small edit-request" data-request-edit="'+esc(r.id)+'">✏️ แก้ไขรายละเอียด</button><button type="button" class="btn small delete-request" data-request-delete="'+esc(r.id)+'">ลบคำขอ</button><button type="button" class="btn small print-request" data-request-print="'+esc(r.id)+'">พรีวิว / พิมพ์ใบขออนุญาต</button><button type="button" class="btn small complete-request" data-request-complete="'+esc(r.id)+'">ดำเนินการแล้วเสร็จ</button></div>' +
           '</div>' +
         '</div>'
       );
@@ -2414,6 +2391,7 @@ function renderRequests(){
   attachRowButtons();
   attachDriverSelects();
   attachConflictAcknowledgementButtons();
+  attachRequestAdminButtons();
 }
 
 /* ===== พนักงานขับรถ: ตรวจเวลาซ้อน + ป๊อปอัปเตือน ===== */
@@ -2421,23 +2399,16 @@ function drvIsActive(o){
   var st = getDisplayStatus(o);
   return st === 'อนุมัติแล้ว' || st === 'จัดรถแล้ว' || st === 'กำลังใช้งาน';
 }
-function findDriverConflicts(r, driverName){
-  if(!driverName){ return []; }
-  var s = requestStart(r), e = requestEnd(r);
-  return requests.filter(function(o){
-    return String(o.id) !== String(r.id) &&
-      String(o.driver || '') === driverName &&
-      drvIsActive(o) &&
-      overlap(s, e, requestStart(o), requestEnd(o));
-  }).sort(function(x, y){ return (requestStart(x) || 0) - (requestStart(y) || 0); });
-}
+function driverDutyStart(o){return parseDateTime(o.driverStartDate||o.dateGo,o.driverStartTime||o.timeGo||'00:00')}
+function driverDutyEnd(o){return parseDateTime(o.driverEndDate||o.dateBack||o.dateGo,o.driverEndTime||o.timeBack||o.timeGo||'23:59')}
+function findDriverConflicts(r,driverName){if(!driverName)return [];var s=driverDutyStart(r),e=driverDutyEnd(r);return requests.filter(function(o){return String(o.id)!==String(r.id)&&String(o.driver||'')===driverName&&drvIsActive(o)&&overlap(s,e,driverDutyStart(o),driverDutyEnd(o));}).sort(function(x,y){return (driverDutyStart(x)||0)-(driverDutyStart(y)||0);});}
 function drvThaiDate(d){
   var m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
   if(!m){ return '-'; }
   return 'วันที่ ' + Number(m[3]) + ' เดือน ' + thaiMonths[Number(m[2]) - 1] + ' พ.ศ. ' + (Number(m[1]) + 543);
 }
 function drvRangeText(o){
-  var d1 = o.dateGo, d2 = o.dateBack || o.dateGo, t1 = o.timeGo || '-', t2 = o.timeBack || '-';
+  var d1=o.driverStartDate||o.dateGo,d2=o.driverEndDate||o.dateBack||o.dateGo,t1=o.driverStartTime||o.timeGo||'-',t2=o.driverEndTime||o.timeBack||'-';
   if(d1 === d2){ return drvThaiDate(d1) + ' เวลา ' + t1 + ' - ' + t2 + ' น.'; }
   return 'ตั้งแต่' + drvThaiDate(d1) + ' เวลา ' + t1 + ' น. ถึง' + drvThaiDate(d2) + ' เวลา ' + t2 + ' น.';
 }
@@ -2578,13 +2549,14 @@ function attachRowButtons(){
               }
             }
           }
-          var drvSel = card.querySelector('.driverSel');
-          var driverValue = drvSel ? drvSel.value : null;
-          if(
-            drvSel && driverValue &&
-            (status === 'อนุมัติแล้ว' || status === 'จัดรถแล้ว' || status === 'กำลังใช้งาน')
-          ){
-            var drvConf = findDriverConflicts(r, driverValue);
+          var drvSel=card.querySelector('.driverSel'),driverValue=drvSel?drvSel.value:null;
+          var driverStartDate=card.querySelector('.driverStartDate')?card.querySelector('.driverStartDate').value:'',driverStartTime=card.querySelector('.driverStartTime')?card.querySelector('.driverStartTime').value:'',driverEndDate=card.querySelector('.driverEndDate')?card.querySelector('.driverEndDate').value:'',driverEndTime=card.querySelector('.driverEndTime')?card.querySelector('.driverEndTime').value:'';
+          if(drvSel&&driverValue){
+            if(!driverStartDate||!driverStartTime||!driverEndDate||!driverEndTime){alert('กรุณาระบุวันที่และเวลาปฏิบัติหน้าที่ของคนขับให้ครบ');return;}
+            var probe=Object.assign({},r,{driverStartDate:driverStartDate,driverStartTime:driverStartTime,driverEndDate:driverEndDate,driverEndTime:driverEndTime});
+            if(driverDutyStart(probe)>=driverDutyEnd(probe)){alert('เวลาสิ้นสุดปฏิบัติหน้าที่ต้องอยู่หลังเวลาเริ่มต้น');return;}
+            if(status==='อนุมัติแล้ว'||status==='จัดรถแล้ว'||status==='กำลังใช้งาน'){
+              var drvConf=findDriverConflicts(probe,driverValue);
             if(drvConf.length){
               driverConflictPrompt(r, drvSel, driverValue, drvConf);
               return;
@@ -2616,15 +2588,7 @@ function attachRowButtons(){
                 (err.message || err)
               );
             })
-            .updateRequestStatusWithAudit(
-              id,
-              status,
-              checked.join(', '),
-              recordedBy,
-              '',
-              currentAdminToken(),
-              driverValue
-            );
+            .updateRequestStatusWithAudit(id,status,checked.join(', '),recordedBy,'',currentAdminToken(),driverValue,driverStartDate,driverStartTime,driverEndDate,driverEndTime);
         }
       );
     });
@@ -3990,6 +3954,40 @@ function mtRenderHistory(){
   box.querySelectorAll('[data-mt-hdone]').forEach(function(b){b.addEventListener('click',function(){mtResolve(b.getAttribute('data-mt-hdone'),'DONE',b)})});
   box.querySelectorAll('[data-mt-hdis]').forEach(function(b){b.addEventListener('click',function(){mtResolve(b.getAttribute('data-mt-hdis'),'DISMISS',b)})});
 }
+
+/* ===== V1.2.9 request administration ===== */
+function attachRequestAdminButtons(){
+  document.querySelectorAll('[data-request-edit]').forEach(function(b){b.addEventListener('click',function(){openRequestEditModal(b.getAttribute('data-request-edit'));});});
+  document.querySelectorAll('[data-request-delete]').forEach(function(b){b.addEventListener('click',function(){adminDeleteRequest(b.getAttribute('data-request-delete'));});});
+  document.querySelectorAll('[data-request-print]').forEach(function(b){b.addEventListener('click',function(){dashboardPrintRequest(b.getAttribute('data-request-print'),b);});});
+  document.querySelectorAll('[data-request-complete]').forEach(function(b){b.addEventListener('click',function(){adminCompleteRequest(b.getAttribute('data-request-complete'),b);});});
+}
+function adminDeleteRequest(id){var r=requests.find(function(x){return String(x.id)===String(id);});if(!r)return;if(!confirm('ยืนยันลบคำขอของ '+(r.name||'ผู้ขอ')+' ปลายทาง '+(r.destination||'-')+' ?\nระบบจะเก็บรายละเอียดรายการที่ลบไว้ใน Audit Log'))return;google.script.run.withSuccessHandler(function(){loadRequests();alert('ลบคำขอแล้ว และบันทึกประวัติไว้ใน Log');}).withFailureHandler(function(err){alert('ลบคำขอไม่สำเร็จ: '+((err&&err.message)||err));}).deleteRequest(id,currentAdminToken());}
+function adminCompleteRequest(id,btn){var r=requests.find(function(x){return String(x.id)===String(id);});if(!r)return;if(!confirm('ยืนยันดำเนินการแล้วเสร็จสำหรับคำขอของ '+(r.name||'-')+'?\nรายการจะออกจากแท็บจัดรถ และเก็บรายละเอียดไว้ใน Log'))return;btn.disabled=true;btn.textContent='กำลังบันทึก...';google.script.run.withSuccessHandler(function(){loadRequests();alert('ดำเนินการแล้วเสร็จ รายการถูกเก็บไว้ใน Log แล้ว');}).withFailureHandler(function(err){btn.disabled=false;btn.textContent='ดำเนินการแล้วเสร็จ';alert('ดำเนินการไม่สำเร็จ: '+((err&&err.message)||err));}).completeRequestAndArchive(id,currentAdminToken());}
+function openRequestEditModal(id){
+  var r=requests.find(function(x){return String(x.id)===String(id);});if(!r)return;
+  var ov=document.createElement('div');ov.className='edit-request-overlay';ov.id='requestEditOverlay';
+  function field(label,key,value,type,full){return '<div class="field'+(full?' full':'')+'"><label>'+label+'</label><input id="editReq_'+key+'" type="'+(type||'text')+'" value="'+esc(value==null?'':value)+'"></div>';}
+  ov.innerHTML='<div class="edit-request-modal"><h2>แก้ไขรายละเอียดคำขอใช้รถ</h2><div class="field-hint">Request ID: '+esc(r.id)+' · แก้ไขได้ทุกข้อมูลที่ผู้ขอบันทึกไว้</div><div class="edit-request-grid">'+
+    field('รหัสบุคลากร','staffId',r.staffId)+field('ชื่อ-นามสกุล','name',r.name)+field('ตำแหน่ง','position',r.position)+field('สังกัด','department',r.department)+
+    field('ปลายทาง','destination',r.destination,'text',true)+field('วัตถุประสงค์','purpose',r.purpose,'text',true)+
+    field('วันที่เดินทางไป','dateGo',r.dateGo,'date')+field('เวลาเดินทางไป','timeGo',r.timeGo,'time')+field('วันที่เดินทางกลับ','dateBack',r.dateBack,'date')+field('เวลากลับ','timeBack',r.timeBack,'time')+
+    '<div class="field"><label>ต้องการคนขับจากโรงเรียน</label><select id="editReq_needDriver"><option value="1" '+(r.needDriver==='ต้องการ'?'selected':'')+'>ต้องการ</option><option value="0" '+(r.needDriver!=='ต้องการ'?'selected':'')+'>ไม่ต้องการ</option></select></div>'+
+    field('ชื่อผู้ขับรถที่ผู้ขอระบุ','requestedDriver',r.requestedDriver)+field('เบอร์โทรศัพท์ผู้ขอ','requesterPhone',r.requesterPhone,'tel')+
+    field('จำนวนผู้ร่วมเดินทาง','companionCount',r.companionCount,'number')+field('รายชื่อผู้ร่วมเดินทาง','companionNames',r.companionNames)+
+    field('จำนวนนักเรียน','students',r.students,'number')+field('จำนวนครู','teachers',r.teachers,'number')+field('จำนวนอื่น ๆ','others',r.others,'number')+field('หมายเหตุ','note',r.note,'text',true)+
+    '</div><div class="edit-request-actions"><button type="button" class="btn secondary" id="editReqCancel">ยกเลิก</button><button type="button" class="btn" id="editReqSave">บันทึกการแก้ไข</button></div></div>';
+  document.body.appendChild(ov);var need=ov.querySelector('#editReq_needDriver'),req=ov.querySelector('#editReq_requestedDriver').parentNode;
+  function sync(){req.style.display=need.value==='1'?'none':'block';}need.addEventListener('change',sync);sync();
+  ov.querySelector('#editReqCancel').addEventListener('click',function(){ov.remove();});ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+  ov.querySelector('#editReqSave').addEventListener('click',function(){
+    var val=function(k){return ov.querySelector('#editReq_'+k).value;};
+    var payload={id:r.id,staffId:val('staffId'),name:val('name'),position:val('position'),department:val('department'),destination:val('destination'),purpose:val('purpose'),dateGo:val('dateGo'),timeGo:val('timeGo'),dateBack:val('dateBack'),timeBack:val('timeBack'),needDriver:need.value==='1',requestedDriver:val('requestedDriver'),requesterPhone:val('requesterPhone'),companionCount:val('companionCount'),companionNames:val('companionNames'),students:val('students'),teachers:val('teachers'),others:val('others'),note:val('note')};
+    var save=ov.querySelector('#editReqSave');save.disabled=true;save.textContent='กำลังบันทึก...';
+    google.script.run.withSuccessHandler(function(){ov.remove();loadRequests();alert('แก้ไขรายละเอียดคำขอเรียบร้อยแล้ว');}).withFailureHandler(function(err){save.disabled=false;save.textContent='บันทึกการแก้ไข';alert('แก้ไขไม่สำเร็จ: '+((err&&err.message)||err));}).updateRequestDetails(payload,currentAdminToken());
+  });
+}
+
 </script>
 </body>
 </html>
