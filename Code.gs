@@ -72,7 +72,7 @@ function formatTime_(v){if(!v)return '';if(v instanceof Date)return Utilities.fo
 function ensureRequestColumns_(sh){
   // เพิ่มหัวคอลัมน์ใหม่ต่อท้ายชีต Requests เมื่อยังไม่มี (ไม่แตะคอลัมน์/ข้อมูลเดิม)
   var lastCol=Math.max(sh.getLastColumn(),1),headers=sh.getRange(1,1,1,lastCol).getValues()[0];
-  [REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_].forEach(function(name){
+  ['วันที่เริ่มขับรถ','เวลาเริ่มขับรถ','วันที่สิ้นสุดขับรถ','เวลาสิ้นสุดขับรถ',REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_].forEach(function(name){
     if(headers.indexOf(name)>=0)return;
     var need=headers.length+1;
     if(sh.getMaxColumns()<need)sh.insertColumnsAfter(sh.getMaxColumns(),need-sh.getMaxColumns());
@@ -85,7 +85,7 @@ function ensureRequestColumns_(sh){
 function cleanPhone_(v){return String(v==null?'':v).trim().replace(/[^\d+\-\s()]/g,'').slice(0,30);}
 function formatPhone_(v){var s=String(v==null?'':v).trim();return /^\d{9}$/.test(s)?'0'+s:s;} // ข้อมูลที่ Sheets แปลงเป็นตัวเลขจนเลข 0 นำหน้าหาย
 function requestToClient_(r){
-  return {id:String(r.id||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),requesterPhone:formatPhone_(r[REQ_PHONE_COL_]),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||'')};
+  return {id:String(r.id||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),driverStartDate:formatDate_(r['วันที่เริ่มขับรถ']),driverStartTime:formatTime_(r['เวลาเริ่มขับรถ']),driverEndDate:formatDate_(r['วันที่สิ้นสุดขับรถ']),driverEndTime:formatTime_(r['เวลาสิ้นสุดขับรถ']),requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),requesterPhone:formatPhone_(r[REQ_PHONE_COL_]),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||'')};
 }
 // อ่านอย่างเดียว: ดึงข้อมูลล่าสุดของคำขอ 1 รายการตาม Request ID สำหรับพิมพ์ใบอนุญาต (ไม่เปลี่ยนสถานะ ไม่เขียนชีต ไม่เขียน AuditLog)
 function getRequestForPrint(id,adminToken){
@@ -504,8 +504,8 @@ function getDriverNames_(){
   return out;
 }
 function driverRangeKey_(o){
-  var d1=formatDate_(o['วันที่ไป']),d2=formatDate_(o['วันที่กลับ'])||d1;
-  var t1=normalizeTimeValue_(o['เวลาไป']||'00:00'),t2=normalizeTimeValue_(o['เวลากลับ']||o['เวลาไป']||'23:59');
+  var d1=formatDate_(o['วันที่เริ่มขับรถ'])||formatDate_(o['วันที่ไป']),d2=formatDate_(o['วันที่สิ้นสุดขับรถ'])||formatDate_(o['วันที่กลับ'])||d1;
+  var t1=normalizeTimeValue_(o['เวลาเริ่มขับรถ']||o['เวลาไป']||'00:00'),t2=normalizeTimeValue_(o['เวลาสิ้นสุดขับรถ']||o['เวลากลับ']||o['เวลาไป']||'23:59');
   return {start:d1+'T'+t1,end:d2+'T'+t2,d1:d1,d2:d2,t1:t1,t2:t2};
 }
 function findDriverConflict_(rows,target,driver){
@@ -622,13 +622,14 @@ function saveRequest(data,sessionToken){
     return {id:id,ok:true};
   }finally{lock.releaseLock();}
 }
-function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,driver){
+function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,driver,driverStartDate,driverStartTime,driverEndDate,driverEndTime){
   var actingAdmin=requireAdminSession_(adminToken); recordedBy=actingAdmin.account;
   if(Object.keys(STATUS).map(function(k){return STATUS[k];}).indexOf(String(status))<0) throw new Error('สถานะที่ส่งมาไม่ถูกต้อง');
   if(String(status)===STATUS.ASSIGNED && !String(vehiclesCsv||'').trim()) throw new Error('ต้องเลือกอย่างน้อย 1 คันก่อนเปลี่ยนสถานะเป็นจัดรถแล้ว');
   var lock=LockService.getScriptLock(); lock.waitLock(10000);
   try {
-    var sh=sheet_(SHEETS.REQUESTS),headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],rows=rowsToObjects_(sh),target=rows.find(function(r){return String(r.id)===String(id);});
+    var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);
+    var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],rows=rowsToObjects_(sh),target=rows.find(function(r){return String(r.id)===String(id);});
     if(!target)throw new Error('ไม่พบคำขอรหัส: '+id);
     function col(n){var i=headers.indexOf(n);if(i<0)throw new Error('ไม่พบคอลัมน์ '+n+' ในชีต Requests');return i+1;}
     var driverToSet=null;
@@ -637,8 +638,17 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
       if(driver){
         if(getDriverNames_().indexOf(driver)<0)throw new Error('ไม่พบพนักงานขับรถ "'+driver+'" ในชีต Drivers');
         if([STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE].indexOf(String(status))>-1){
-          var hit=findDriverConflict_(rows,target,driver);
-          if(hit)throw new Error('พนักงานขับรถ '+driver+' ถูกจัดให้ขับรถแล้วใน'+(hit.range.d1===hit.range.d2?thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' - '+hit.range.t2+' น.':'ตั้งแต่'+thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' น. ถึง'+thaiDateText_(hit.range.d2)+' เวลา '+hit.range.t2+' น.')+' (รายการของ '+String(hit.row['ชื่อ-นามสกุล']||'-')+') กรุณาเลือกพนักงานขับรถรายอื่น หรือเปลี่ยนคนขับของรายการก่อนหน้า');
+          var ds=String(driverStartDate||formatDate_(target['วันที่ไป'])),dt=normalizeTimeValue_(driverStartTime||target['เวลาไป']||'00:00');
+          var de=String(driverEndDate||formatDate_(target['วันที่กลับ'])||ds),et=normalizeTimeValue_(driverEndTime||target['เวลากลับ']||target['เวลาไป']||'23:59');
+          if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||!/^\d{2}:\d{2}$/.test(dt)||!/^\d{4}-\d{2}-\d{2}$/.test(de)||!/^\d{2}:\d{2}$/.test(et))throw new Error('กรุณาระบุวันที่และเวลาปฏิบัติหน้าที่ของคนขับให้ครบถ้วน');
+          if(ds+'T'+dt>=de+'T'+et)throw new Error('เวลาสิ้นสุดปฏิบัติหน้าที่ต้องอยู่หลังเวลาเริ่มต้น');
+          var probe={id:target.id,'วันที่เริ่มขับรถ':ds,'เวลาเริ่มขับรถ':dt,'วันที่สิ้นสุดขับรถ':de,'เวลาสิ้นสุดขับรถ':et};
+          var hit=findDriverConflict_(rows,probe,driver);
+          if(hit)throw new Error('พนักงานขับรถ '+driver+' ถูกจัดงานทับซ้อนใน'+(hit.range.d1===hit.range.d2?thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' - '+hit.range.t2+' น.':'ตั้งแต่'+thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' น. ถึง'+thaiDateText_(hit.range.d2)+' เวลา '+hit.range.t2+' น.')+' (รายการของ '+String(hit.row['ชื่อ-นามสกุล']||'-')+') กรุณาเลือกเวลาอื่นหรือคนขับรายอื่น');
+          sh.getRange(target._row,col('วันที่เริ่มขับรถ')).setValue(ds);
+          sh.getRange(target._row,col('เวลาเริ่มขับรถ')).setValue(dt);
+          sh.getRange(target._row,col('วันที่สิ้นสุดขับรถ')).setValue(de);
+          sh.getRange(target._row,col('เวลาสิ้นสุดขับรถ')).setValue(et);
         }
       }
       driverToSet=driver;
@@ -671,11 +681,47 @@ function saveRequestWithAudit(payload,adminToken){
   appendAuditLog_('CREATE',result.id,actingAdmin.account,'',STATUS.PENDING,'',{type:'CREATE',savedRequestId:result.id});
   return result;
 }
-function updateRequestStatusWithAudit(id,status,vehicles,recordedBy,note,adminToken,driver){
+function updateRequestStatusWithAudit(id,status,vehicles,recordedBy,note,adminToken,driver,driverStartDate,driverStartTime,driverEndDate,driverEndTime){
   var actingAdmin=requireAdminSession_(adminToken); recordedBy=actingAdmin.account;
   var before=findRequestRowById_(id); if(!before)throw new Error('ไม่พบรายการคำขอ: '+id);
-  var result=updateRequestStatus(id,status,vehicles,recordedBy,note,adminToken,driver),after=findRequestRowById_(id);
-  appendAuditLog_('UPDATE',id,recordedBy||'',before.object['สถานะ']||'',status||'',vehicles||'',{type:'UPDATE',before:before.object,after:after?after.object:{status:status,vehicles:vehicles},note:note||'',previousVehicles:before.object['รถที่จัด']||'',previousDriver:before.object[DRIVER_COL_]||'',driver:after?(after.object[DRIVER_COL_]||''):''}); return result;
+  var result=updateRequestStatus(id,status,vehicles,recordedBy,note,adminToken,driver,driverStartDate,driverStartTime,driverEndDate,driverEndTime),after=findRequestRowById_(id);
+  appendAuditLog_('UPDATE',id,recordedBy||'',before.object['สถานะ']||'',status||'',vehicles||'',{type:'UPDATE',before:before.object,after:after?after.object:{status:status,vehicles:vehicles},note:note||'',previousVehicles:before.object['รถที่จัด']||'',previousDriver:before.object[DRIVER_COL_]||'',driver:after?(after.object[DRIVER_COL_]||''):'',driverDuty:{startDate:driverStartDate,startTime:driverStartTime,endDate:driverEndDate,endTime:driverEndTime}}); return result;
+}
+function updateRequestDetails(payload,adminToken){
+  var actingAdmin=requireAdminSession_(adminToken);payload=payload||{};
+  var id=String(payload.id||'').trim();if(!id)throw new Error('ไม่พบรหัสคำขอ');
+  var lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบรายการคำขอ: '+id);
+    var sh=found.sheet;ensureRequestColumns_(sh);
+    var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+    var fields={
+      'รหัสบุคลากร':String(payload.staffId||'').trim(),'ชื่อ-นามสกุล':String(payload.name||'').trim(),'ตำแหน่ง':String(payload.position||'').trim(),'สังกัด':String(payload.department||'').trim(),
+      'ปลายทาง':String(payload.destination||'').trim(),'วัตถุประสงค์':String(payload.purpose||'').trim(),'วันที่ไป':String(payload.dateGo||'').trim(),'เวลาไป':String(payload.timeGo||'').trim(),
+      'วันที่กลับ':String(payload.dateBack||'').trim(),'เวลากลับ':String(payload.timeBack||'').trim(),'ต้องการคนขับ':payload.needDriver?'ต้องการ':'ไม่ต้องการ',
+      'จำนวนผู้ร่วมเดินทาง':Number(payload.companionCount)||0,'รายชื่อผู้ร่วมเดินทาง':String(payload.companionNames||'').trim(),'จำนวนนักเรียน':Number(payload.students)||0,'จำนวนครู':Number(payload.teachers)||0,'จำนวนอื่นๆ':Number(payload.others)||0,
+      'หมายเหตุ':String(payload.note||'').trim(),[REQ_DRIVER_NAME_COL_]:payload.needDriver?'':String(payload.requestedDriver||'').trim(),[REQ_PHONE_COL_]:cleanPhone_(payload.requesterPhone)
+    };
+    if(!fields['ชื่อ-นามสกุล']||!fields['ปลายทาง']||!fields['วัตถุประสงค์']||!fields['วันที่ไป']||!fields['เวลาไป'])throw new Error('กรุณากรอกชื่อ ปลายทาง วัตถุประสงค์ วันที่ไป และเวลาไปให้ครบ');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(fields['วันที่ไป'])||!/^\d{2}:\d{2}$/.test(fields['เวลาไป']))throw new Error('รูปแบบวันที่หรือเวลาเดินทางไม่ถูกต้อง');
+    if(fields['วันที่กลับ']&&!/^\d{4}-\d{2}-\d{2}$/.test(fields['วันที่กลับ']))throw new Error('รูปแบบวันที่กลับไม่ถูกต้อง');
+    if(fields['เวลากลับ']&&!/^\d{2}:\d{2}$/.test(fields['เวลากลับ']))throw new Error('รูปแบบเวลากลับไม่ถูกต้อง');
+    if(fields['วันที่กลับ']&&fields['วันที่กลับ']<fields['วันที่ไป'])throw new Error('วันที่กลับต้องไม่อยู่ก่อนวันที่เดินทางไป');
+    if(!payload.needDriver&&!fields[REQ_DRIVER_NAME_COL_])throw new Error('กรุณาระบุชื่อผู้ขับรถ');
+    var before=found.object;
+    Object.keys(fields).forEach(function(k){var i=headers.indexOf(k);if(i<0){i=headers.length;headers.push(k);sh.getRange(1,i+1).setValue(k);}sh.getRange(found.row,i+1).setValue(fields[k]);});
+    var after=findRequestRowById_(id);
+    appendAuditLog_('REQUEST_EDIT',id,actingAdmin.account,before['สถานะ']||'',after.object['สถานะ']||'',after.object['รถที่จัด']||'',{type:'REQUEST_EDIT',before:before,after:after.object});
+    return {ok:true};
+  }finally{lock.releaseLock();}
+}
+function completeRequestAndArchive(id,adminToken){
+  var actingAdmin=requireAdminSession_(adminToken);var lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบรายการคำขอ: '+id);
+    appendAuditLog_('REQUEST_COMPLETED_ARCHIVED',id,actingAdmin.account,found.object['สถานะ']||'','ดำเนินการแล้วเสร็จ',found.object['รถที่จัด']||'',{type:'REQUEST_COMPLETED_ARCHIVED',completedRequest:found.object});
+    found.sheet.deleteRow(found.row);return {ok:true,archived:true};
+  }finally{lock.releaseLock();}
 }
 function deleteRequest(id,adminToken){
   var actingAdmin=requireAdminSession_(adminToken); var admin=actingAdmin.account;
