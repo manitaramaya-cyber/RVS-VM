@@ -3463,7 +3463,7 @@ function dailyRenderMonth(offset,selKey){
   html+='</div><div class="dashboard-days">';
   var first=new Date(y,m,1),start=first.getDay(),days=new Date(y,m+1,0).getDate(),total=Math.ceil((start+days)/7)*7,todayKey=dateKey(new Date());
   for(var i=0;i<total;i++){
-    var d=new Date(y,m,1-start+i),key=dateKey(d),events=requests.filter(function(r){return dateRangeContains(r,key)});
+    var d=new Date(y,m,1-start+i),key=dateKey(d),events=requests.filter(function(r){return dateRangeContains(r,key)&&r.status!=='ยกเลิก'&&r.status!=='ปฏิเสธ'});
     html+='<button type="button" class="dashboard-day'+(d.getMonth()!==m?' muted':'')+(key===todayKey?' today':'')+(key===selKey?' selected':'')+(events.length?' has-booking':'')+'" data-daily-key="'+key+'" title="'+esc(events.length+' รายการ')+'">'+d.getDate()+'</button>';
   }
   return html+'</div></div>';
@@ -3494,11 +3494,11 @@ function dailyGenerate(){
   google.script.run.withSuccessHandler(function(rep){
     if(document.getElementById('dailyDate').value!==key)return;
     ta.value=rep.text||'';
-    dailyRenderBlocks(rep.blocks||[]);
+    dailyRenderBlocks(rep.blocks||[],rep.dateText);
     var has=!!rep.count;
     document.getElementById('dailyCopyBtn').disabled=!has;document.getElementById('dailySendBtn').disabled=!has;
     var msgs=[];
-    if(!has)msgs.push('ไม่มีรายการที่พร้อมรายงานใน'+rep.dateText+' (ต้องอนุมัติแล้ว + จัดรถแล้ว + มีผู้ขับรถ) — ระบบส่งอัตโนมัติจะไม่ส่งข้อความ');
+    if(!has)msgs.push('ไม่มีคำขอใช้รถใน'+rep.dateText+' — ระบบส่งอัตโนมัติจะไม่ส่งข้อความ');
     (rep.warnings||[]).forEach(function(w){msgs.push('⚠ '+w)});
     if(msgs.length){warn.hidden=false;warn.innerHTML=msgs.map(esc).join('<br>')}
     var parts=[];
@@ -3508,9 +3508,11 @@ function dailyGenerate(){
     st.textContent=parts.join(' • ');
   }).withFailureHandler(function(err){ta.value='';warn.hidden=false;warn.textContent='สร้างรายงานไม่สำเร็จ: '+((err&&err.message)||err)}).getDailyReport(key,currentAdminToken());
 }
-var dailyReportBlocks=[];
-function dailyRenderBlocks(blocks){
-  dailyReportBlocks=Array.isArray(blocks)?blocks:[];
+var dailyReportBlocks=[],dailyReportDateText='';
+// ข้อความของแต่ละเคส = ข้อความฉบับสมบูรณ์ (หัวเรื่อง + วันที่ + เนื้อหา + ขอบคุณ) พร้อมคัดลอกไปวางได้ทันที
+function dailyFullMsg(i){return 'แจ้งการใช้รถโรงเรียน\n'+dailyReportDateText+'\n\n'+dailyReportBlocks[i]+'\n\n🙏🏻ขอบคุณครับ🙏🏻'}
+function dailyRenderBlocks(blocks,dateText){
+  dailyReportBlocks=Array.isArray(blocks)?blocks:[];dailyReportDateText=String(dateText||'');
   var box=document.getElementById('dailyBlocks');if(!box)return;
   if(!dailyReportBlocks.length){box.innerHTML='<div class="daily-empty">ไม่มีคำขอใช้รถในวันที่เลือก</div>';return;}
   var accents=['#5B9BD5','#9B7EDE','#5FAE7B','#E58B45','#D2685B','#E8B23D'];
@@ -3518,7 +3520,7 @@ function dailyRenderBlocks(blocks){
     return '<section class="daily-block" style="--daily-accent:'+accents[i%accents.length]+'">'+
       '<div class="daily-block-head"><div class="daily-block-title">คำขอที่ '+(i+1)+'</div>'+
       '<button type="button" class="daily-block-copy" onclick="dailyCopyBlock('+i+')">📋 คัดลอกคำขอนี้</button></div>'+
-      '<div class="daily-block-text">'+esc(t)+'</div></section>';
+      '<div class="daily-block-text">'+esc(dailyFullMsg(i))+'</div></section>';
   }).join('');
 }
 function dailyCopyText(txt,btn){
@@ -3529,7 +3531,7 @@ function dailyCopyText(txt,btn){
 }
 function dailyCopyBlock(i){
   var btn=document.querySelectorAll('.daily-block-copy')[i];
-  dailyCopyText(dailyReportBlocks[i],btn);
+  dailyCopyText(dailyFullMsg(i),btn);
 }
 function dailyCopy(){
   var ta=document.getElementById('dailyText'),btn=document.getElementById('dailyCopyBtn');
