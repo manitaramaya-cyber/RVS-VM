@@ -657,7 +657,7 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
 @media(max-width:700px){.dashboard-layout{grid-template-columns:minmax(0,1fr);}.dashboard-panel-left{order:1}.dashboard-panel-center{order:2}.dashboard-panel-right{order:3;grid-column:auto}.dashboard-panel-right .dashboard-panel-body{display:block}.dashboard-months{grid-template-columns:1fr}.dashboard-toolbar{align-items:flex-start}.dashboard-day{min-height:38px}.dashboard-panel-body{padding:10px}}
 
 
-.action-grid.has-driver{grid-template-columns:180px 1fr 210px auto}
+.action-grid.has-driver{grid-template-columns:180px minmax(180px,1fr) minmax(280px,1.5fr) auto}.driver-duty-grid{grid-template-columns:1fr 1fr}
 @media(max-width:900px){.action-grid.has-driver{grid-template-columns:1fr}}
 .drv-hint{font-size:13px;color:var(--dim);margin-top:4px}
 .drv-overlay{position:fixed;inset:0;z-index:9998;background:rgba(5,12,16,.72);display:flex;align-items:center;justify-content:center;padding:18px}
@@ -3246,9 +3246,9 @@ function reportDate(v){
   if(isNaN(d.getTime())) return s;
   return d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
 }
-function reportActionLabel(a){return a==='CREATE'?'สร้างรายการ':a==='DELETE'?'ลบรายการ':a==='UPDATE'?'แก้ไข / เปลี่ยนสถานะ':a==='ACK_CONFLICT'?'รับทราบรถซ้ำซ้อน':a==='DOC_CREATE'?'บันทึกเอกสารรถใหม่':a==='DOC_RENEW'?'ต่ออายุเอกสารรถ':a==='DOC_EDIT'?'แก้ไขเอกสารรถ':a==='DOC_ACK'?'รับทราบวันหมดอายุเอกสารรถ':a==='MAINT_CREATE'?'บันทึกประวัติซ่อมบำรุง':a==='MAINT_EDIT'?'แก้ไขประวัติซ่อมบำรุง':a==='MAINT_DONE'?'ดำเนินการเข้ารับการซ่อมบำรุงแล้ว':a==='MAINT_DISMISS'?'ปิดการแจ้งเตือนซ่อมบำรุง':(a||'ทำรายการ');}
+function reportActionLabel(a){return a==='CREATE'?'สร้างรายการ':a==='DELETE'?'ลบรายการ':a==='UPDATE'?'แก้ไข / เปลี่ยนสถานะ':a==='REQUEST_EDIT'?'แก้ไขรายละเอียดคำขอ':a==='REQUEST_COMPLETED_ARCHIVED'?'ดำเนินการแล้วเสร็จ / เก็บเข้า Log':a==='ACK_CONFLICT'?'รับทราบรถซ้ำซ้อน':a==='DOC_CREATE'?'บันทึกเอกสารรถใหม่':a==='DOC_RENEW'?'ต่ออายุเอกสารรถ':a==='DOC_EDIT'?'แก้ไขเอกสารรถ':a==='DOC_ACK'?'รับทราบวันหมดอายุเอกสารรถ':a==='MAINT_CREATE'?'บันทึกประวัติซ่อมบำรุง':a==='MAINT_EDIT'?'แก้ไขประวัติซ่อมบำรุง':a==='MAINT_DONE'?'ดำเนินการเข้ารับการซ่อมบำรุงแล้ว':a==='MAINT_DISMISS'?'ปิดการแจ้งเตือนซ่อมบำรุง':(a||'ทำรายการ');}
 function reportActionClass(a){return a==='DELETE'?'status-rejected':a==='CREATE'?'status-done':'status-approved';}
-function reportSource(log){if(!log)return {};if(log.deletedRequest||log.request||log.data||log.details||log.record)return log.deletedRequest||log.request||log.data||log.details||log.record;var detail=log.detail;if(typeof detail==='string'&&detail){try{detail=JSON.parse(detail);}catch(e){detail={};}}return detail&&(detail.deletedRequest||detail.request||detail.after||detail.before||detail.data||detail.details||detail.record)||{};}
+function reportSource(log){if(!log)return {};if(log.deletedRequest||log.request||log.data||log.details||log.record)return log.deletedRequest||log.request||log.data||log.details||log.record;var detail=log.detail;if(typeof detail==='string'&&detail){try{detail=JSON.parse(detail);}catch(e){detail={};}}return detail&&(detail.deletedRequest||detail.completedRequest||detail.request||detail.after||detail.before||detail.data||detail.details||detail.record)||{};}
 function reportField(label,value,full){
   if(value==null||String(value).trim()==='') return '';
   return '<div class="report-field'+(full?' full':'')+'"><div class="report-label">'+reportEsc(label)+'</div><div class="report-value">'+reportEsc(value)+'</div></div>';
