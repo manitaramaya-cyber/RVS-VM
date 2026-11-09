@@ -2306,7 +2306,7 @@ function renderRequests(){
       if(needsDriver){
         var dnames = drivers.slice();
         if(r.driver && dnames.indexOf(r.driver) < 0){ dnames.push(r.driver); }
-        driverBlock='<div><label>พนักงานขับรถ</label><select class="driverSel" data-prev="'+esc(r.driver||'')+'"><option value="">— เลือกพนักงานขับรถ —</option>'+dnames.map(function(n){return '<option value="'+esc(n)+'"'+(n===r.driver?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select><div class="driver-duty-grid"><div><label>วันที่เริ่มขับ</label><input type="date" class="driverStartDate" value="'+esc(r.driverStartDate||r.dateGo||'')+'"></div><div><label>เวลาเริ่ม</label><input type="time" class="driverStartTime" value="'+esc(r.driverStartTime||r.timeGo||'')+'"></div><div><label>วันที่สิ้นสุด</label><input type="date" class="driverEndDate" value="'+esc(r.driverEndDate||r.dateBack||r.dateGo||'')+'"></div><div><label>เวลาสิ้นสุด</label><input type="time" class="driverEndTime" value="'+esc(r.driverEndTime||r.timeBack||r.timeGo||'')+'"></div></div>'+(driversError?'<div class="drv-hint" style="color:#F0A79E">'+esc(driversError)+'</div>':'')+'</div>';
+        driverBlock='<div><label>พนักงานขับรถ</label><select class="driverSel" data-prev="'+esc(r.driver||'')+'"><option value="">— เลือกพนักงานขับรถ —</option>'+dnames.map(function(n){return '<option value="'+esc(n)+'"'+(n===r.driver?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select><div class="driver-duty-grid"><div><label>วันที่เริ่มขับ</label><input type="date" class="driverStartDate" value="'+esc(r.driverStartDate||r.dateGo||'')+'"></div><div><label>เวลาเริ่ม</label><input type="time" class="driverStartTime" value="'+esc(r.driverStartTime||r.timeGo||'')+'"></div><div><label>วันที่สิ้นสุด</label><input type="date" class="driverEndDate" value="'+esc(r.driverEndDate||r.dateBack||r.dateGo||'')+'"></div><div><label>เวลาสิ้นสุด</label><input type="time" class="driverEndTime" value="'+esc(r.driverEndTime||r.timeBack||'23:59')+'"></div></div>'+(driversError?'<div class="drv-hint" style="color:#F0A79E">'+esc(driversError)+'</div>':'')+'</div>';
       }
       return (
         '<div class="request-card" data-id="' +
@@ -2400,7 +2400,7 @@ function drvIsActive(o){
   return st === 'อนุมัติแล้ว' || st === 'จัดรถแล้ว' || st === 'กำลังใช้งาน';
 }
 function driverDutyStart(o){return parseDateTime(o.driverStartDate||o.dateGo,o.driverStartTime||o.timeGo||'00:00')}
-function driverDutyEnd(o){return parseDateTime(o.driverEndDate||o.dateBack||o.dateGo,o.driverEndTime||o.timeBack||o.timeGo||'23:59')}
+function driverDutyEnd(o){return parseDateTime(o.driverEndDate||o.dateBack||o.dateGo,o.driverEndTime||o.timeBack||'23:59')}
 function findDriverConflicts(r,driverName){if(!driverName)return [];var s=driverDutyStart(r),e=driverDutyEnd(r);return requests.filter(function(o){return String(o.id)!==String(r.id)&&String(o.driver||'')===driverName&&drvIsActive(o)&&overlap(s,e,driverDutyStart(o),driverDutyEnd(o));}).sort(function(x,y){return (driverDutyStart(x)||0)-(driverDutyStart(y)||0);});}
 function drvThaiDate(d){
   var m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
