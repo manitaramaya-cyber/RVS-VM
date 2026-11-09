@@ -2477,9 +2477,15 @@ function attachDriverSelects(){
       if(!r){ return; }
       var val = sel.value;
       if(!val){ sel.setAttribute('data-prev', ''); return; }
-      var conflicts = findDriverConflicts(r, val);
+      var probe=Object.assign({},r,{
+        driverStartDate:card.querySelector('.driverStartDate')?card.querySelector('.driverStartDate').value:r.dateGo,
+        driverStartTime:card.querySelector('.driverStartTime')?card.querySelector('.driverStartTime').value:r.timeGo,
+        driverEndDate:card.querySelector('.driverEndDate')?card.querySelector('.driverEndDate').value:(r.dateBack||r.dateGo),
+        driverEndTime:card.querySelector('.driverEndTime')?card.querySelector('.driverEndTime').value:(r.timeBack||'23:59')
+      });
+      var conflicts = findDriverConflicts(probe, val);
       if(!conflicts.length){ sel.setAttribute('data-prev', val); return; }
-      driverConflictPrompt(r, sel, val, conflicts);
+      driverConflictPrompt(probe, sel, val, conflicts);
     });
   });
 }
