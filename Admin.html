@@ -3749,10 +3749,25 @@ function dashboardRenderMaintAlerts(){
   box.querySelectorAll('[data-mt-dismiss]').forEach(function(b){b.addEventListener('click',function(){mtResolve(maintAlerts[+b.getAttribute('data-mt-dismiss')].id,'DISMISS',b)})});
 }
 function mtResolve(id,action,btn){
-  var msg=action==='DONE'?'ยืนยันว่า “ดำเนินการเข้ารับการซ่อมบำรุงแล้ว”?':'ยืนยัน “ไม่ต้องแจ้งเตือนอีก” สำหรับรายการนี้?';
-  if(!confirm(msg))return;
-  if(btn)btn.disabled=true;
-  google.script.run.withSuccessHandler(function(){loadDocAlerts();if(mtData)mtLoad()}).withFailureHandler(function(err){if(btn)btn.disabled=false;alert('บันทึกไม่สำเร็จ: '+((err&&err.message)||err))}).resolveMaintenanceAlert(id,action,currentAdminToken());
+  // DONE เป็นการปิดงานตามปกติ ไม่ต้องถามยืนยันซ้ำ
+  // DISMISS ยังคงถามยืนยันเพื่อป้องกันการปิดการแจ้งเตือนโดยไม่ตั้งใจ
+  if(action==='DISMISS'&&!confirm('ยืนยัน “ไม่ต้องแจ้งเตือนอีก” สำหรับรายการนี้?'))return;
+  var originalText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='กำลังบันทึก...';}
+  google.script.run.withSuccessHandler(function(){
+    if(btn)btn.textContent='ดำเนินการแล้ว ✓';
+    loadDocAlerts();
+    if(mtData)mtLoad();
+  }).withFailureHandler(function(err){
+    if(btn){btn.disabled=false;btn.textContent=originalText;}
+    var box=document.getElementById('dashboardMaintAlerts');
+    if(box){
+      var note=document.createElement('div');
+      note.className='dashboard-alert';
+      note.textContent='บันทึกไม่สำเร็จ: '+((err&&err.message)||err);
+      box.insertBefore(note,box.firstChild);
+    }
+  }).resolveMaintenanceAlert(id,action,currentAdminToken());
 }
 function mtGoVehicle(v){
   document.querySelector('.tab[data-v="maint"]').click();
