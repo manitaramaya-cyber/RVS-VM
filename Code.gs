@@ -505,7 +505,7 @@ function getDriverNames_(){
 }
 function driverRangeKey_(o){
   var d1=formatDate_(o['วันที่เริ่มขับรถ'])||formatDate_(o['วันที่ไป']),d2=formatDate_(o['วันที่สิ้นสุดขับรถ'])||formatDate_(o['วันที่กลับ'])||d1;
-  var t1=normalizeTimeValue_(o['เวลาเริ่มขับรถ']||o['เวลาไป']||'00:00'),t2=normalizeTimeValue_(o['เวลาสิ้นสุดขับรถ']||o['เวลากลับ']||o['เวลาไป']||'23:59');
+  var t1=normalizeTimeValue_(o['เวลาเริ่มขับรถ']||o['เวลาไป']||'00:00'),t2=normalizeTimeValue_(o['เวลาสิ้นสุดขับรถ']||o['เวลากลับ']||'23:59');
   return {start:d1+'T'+t1,end:d2+'T'+t2,d1:d1,d2:d2,t1:t1,t2:t2};
 }
 function findDriverConflict_(rows,target,driver){
@@ -639,7 +639,7 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
         if(getDriverNames_().indexOf(driver)<0)throw new Error('ไม่พบพนักงานขับรถ "'+driver+'" ในชีต Drivers');
         if([STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE].indexOf(String(status))>-1){
           var ds=String(driverStartDate||formatDate_(target['วันที่ไป'])),dt=normalizeTimeValue_(driverStartTime||target['เวลาไป']||'00:00');
-          var de=String(driverEndDate||formatDate_(target['วันที่กลับ'])||ds),et=normalizeTimeValue_(driverEndTime||target['เวลากลับ']||target['เวลาไป']||'23:59');
+          var de=String(driverEndDate||formatDate_(target['วันที่กลับ'])||ds),et=normalizeTimeValue_(driverEndTime||target['เวลากลับ']||'23:59');
           if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||!/^\d{2}:\d{2}$/.test(dt)||!/^\d{4}-\d{2}-\d{2}$/.test(de)||!/^\d{2}:\d{2}$/.test(et))throw new Error('กรุณาระบุวันที่และเวลาปฏิบัติหน้าที่ของคนขับให้ครบถ้วน');
           if(ds+'T'+dt>=de+'T'+et)throw new Error('เวลาสิ้นสุดปฏิบัติหน้าที่ต้องอยู่หลังเวลาเริ่มต้น');
           var probe={id:target.id,'วันที่เริ่มขับรถ':ds,'เวลาเริ่มขับรถ':dt,'วันที่สิ้นสุดขับรถ':de,'เวลาสิ้นสุดขับรถ':et};
