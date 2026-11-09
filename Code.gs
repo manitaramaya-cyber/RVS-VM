@@ -637,19 +637,19 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
       driver=String(driver).trim();
       if(driver){
         if(getDriverNames_().indexOf(driver)<0)throw new Error('ไม่พบพนักงานขับรถ "'+driver+'" ในชีต Drivers');
+        var ds=String(driverStartDate||formatDate_(target['วันที่ไป'])),dt=normalizeTimeValue_(driverStartTime||target['เวลาไป']||'00:00');
+        var de=String(driverEndDate||formatDate_(target['วันที่กลับ'])||ds),et=normalizeTimeValue_(driverEndTime||target['เวลากลับ']||'23:59');
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||!/^\d{2}:\d{2}$/.test(dt)||!/^\d{4}-\d{2}-\d{2}$/.test(de)||!/^\d{2}:\d{2}$/.test(et))throw new Error('กรุณาระบุวันที่และเวลาปฏิบัติหน้าที่ของคนขับให้ครบถ้วน');
+        if(ds+'T'+dt>=de+'T'+et)throw new Error('เวลาสิ้นสุดปฏิบัติหน้าที่ต้องอยู่หลังเวลาเริ่มต้น');
         if([STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE].indexOf(String(status))>-1){
-          var ds=String(driverStartDate||formatDate_(target['วันที่ไป'])),dt=normalizeTimeValue_(driverStartTime||target['เวลาไป']||'00:00');
-          var de=String(driverEndDate||formatDate_(target['วันที่กลับ'])||ds),et=normalizeTimeValue_(driverEndTime||target['เวลากลับ']||'23:59');
-          if(!/^\d{4}-\d{2}-\d{2}$/.test(ds)||!/^\d{2}:\d{2}$/.test(dt)||!/^\d{4}-\d{2}-\d{2}$/.test(de)||!/^\d{2}:\d{2}$/.test(et))throw new Error('กรุณาระบุวันที่และเวลาปฏิบัติหน้าที่ของคนขับให้ครบถ้วน');
-          if(ds+'T'+dt>=de+'T'+et)throw new Error('เวลาสิ้นสุดปฏิบัติหน้าที่ต้องอยู่หลังเวลาเริ่มต้น');
           var probe={id:target.id,'วันที่เริ่มขับรถ':ds,'เวลาเริ่มขับรถ':dt,'วันที่สิ้นสุดขับรถ':de,'เวลาสิ้นสุดขับรถ':et};
           var hit=findDriverConflict_(rows,probe,driver);
           if(hit)throw new Error('พนักงานขับรถ '+driver+' ถูกจัดงานทับซ้อนใน'+(hit.range.d1===hit.range.d2?thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' - '+hit.range.t2+' น.':'ตั้งแต่'+thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' น. ถึง'+thaiDateText_(hit.range.d2)+' เวลา '+hit.range.t2+' น.')+' (รายการของ '+String(hit.row['ชื่อ-นามสกุล']||'-')+') กรุณาเลือกเวลาอื่นหรือคนขับรายอื่น');
-          sh.getRange(target._row,col('วันที่เริ่มขับรถ')).setValue(ds);
-          sh.getRange(target._row,col('เวลาเริ่มขับรถ')).setValue(dt);
-          sh.getRange(target._row,col('วันที่สิ้นสุดขับรถ')).setValue(de);
-          sh.getRange(target._row,col('เวลาสิ้นสุดขับรถ')).setValue(et);
         }
+        sh.getRange(target._row,col('วันที่เริ่มขับรถ')).setValue(ds);
+        sh.getRange(target._row,col('เวลาเริ่มขับรถ')).setValue(dt);
+        sh.getRange(target._row,col('วันที่สิ้นสุดขับรถ')).setValue(de);
+        sh.getRange(target._row,col('เวลาสิ้นสุดขับรถ')).setValue(et);
       }
       driverToSet=driver;
     }
