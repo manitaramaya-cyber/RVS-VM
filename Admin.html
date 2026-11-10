@@ -884,6 +884,8 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
 .field-hint{margin-top:5px;font-size:12px;line-height:1.5;color:var(--dim)}
 .system-footer{max-width:1500px;margin:24px auto 0;padding:16px 20px;border-top:1px solid var(--line);color:var(--dim);font-size:12px;line-height:1.8}
 @media print{.no-print{display:none!important}}
+.vd-add-box{margin:12px 0;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.vd-restricted{display:block;margin-top:4px;color:#D9A45A;font-size:11px}
 </style>
 </head>
 <body>
@@ -1288,6 +1290,17 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
     <div class="card">
       <div class="section-title">เอกสารสำคัญของรถ — พรบ. / ประกัน / ทะเบียน / ภาษี</div>
       <div class="section-sub">กำหนดวันหมดอายุ แล้วระบบจะแจ้งเตือนล่วงหน้า <b id="vdWindow">30</b> วัน ที่แผงขวาของ Dashboard และจุดสีน้ำตาลบนปฏิทิน กดที่ช่องของรถแต่ละคันเพื่อบันทึก ต่ออายุ หรืออัปโหลดไฟล์ PDF</div>
+      <div style="display:flex;justify-content:flex-end;margin:12px 0"><button type="button" class="btn" onclick="vdShowAddVehicle()">＋ เพิ่มรถยนต์</button></div>
+      <div id="vdAddVehicleBox" class="vd-add-box" hidden>
+        <div class="section-title">เพิ่มรถยนต์ในทะเบียน</div><div class="section-sub">รถทุกคันจะอยู่ในทะเบียนเอกสารและระบบแจ้งเตือน แม้เป็นรถผู้บริหารที่ไม่อนุญาตให้จอง</div>
+        <div class="vd-form">
+          <div class="field"><label>ชื่อรถยนต์ <span class="vd-req">*</span></label><input id="vdAddName" maxlength="120" placeholder="เช่น รถผู้บริหาร 1"></div>
+          <div class="field"><label>ป้ายทะเบียน</label><input id="vdAddPlate" maxlength="40" placeholder="เช่น กข 1234"></div>
+          <div class="field"><label>จำนวนที่นั่ง / ความจุ</label><input id="vdAddCapacity" type="number" min="1" step="1" placeholder="ระบุถ้ามี"></div>
+          <div class="field vd-full"><label>รถยนต์คันนี้สามารถขออนุญาตใช้ได้หรือไม่? <span class="vd-req">*</span></label><div class="mt-radio"><label><input type="radio" name="vdAddPermission" value="ALLOWED" checked> ได้ — รถยนต์ส่วนกลาง</label><label><input type="radio" name="vdAddPermission" value="RESTRICTED"> ไม่ได้ — รถผู้บริหาร</label></div></div>
+        </div>
+        <div class="vd-actions"><button type="button" class="btn" id="vdAddSave" onclick="vdAddVehicle()">บันทึกเพิ่มรถยนต์</button><button type="button" class="btn secondary" onclick="vdHideAddVehicle()">ยกเลิก</button></div><div class="field-hint" id="vdAddMsg"></div>
+      </div>
       <div class="vd-legend"><span class="vd-chip ok">ปกติ</span><span class="vd-chip soon">ใกล้หมดอายุ</span><span class="vd-chip expired">หมดอายุแล้ว</span><span class="vd-chip acked">รับทราบแล้ว</span><span class="vd-chip none">ยังไม่บันทึก</span><button type="button" class="btn secondary small" onclick="vdLoad()" style="margin-left:auto">↻ โหลดใหม่</button></div>
       <div id="vdMatrix"><div class="loading">กำลังโหลด...</div></div>
     </div>
@@ -2204,7 +2217,7 @@ function renderRequests(){
       var displayStatus =
         getDisplayStatus(r);
       var vehicleChecks =
-        vehicles.map(function(v){
+        vehicles.filter(function(v){return v.usagePermission!=='RESTRICTED';}).map(function(v){
           var name =
             v['ชื่อรถ'] || '';
           var current =
@@ -3902,6 +3915,16 @@ function vdGoRenew(vehicle,type){
   document.querySelector('.tab[data-v="vdocs"]').click();
   var tries=0;(function wait(){if(vdData||tries++>40){vdOpenForm(vehicle,type,true)}else setTimeout(wait,150)})();
 }
+function vdShowAddVehicle(){document.getElementById('vdAddVehicleBox').hidden=false;document.getElementById('vdAddName').focus()}
+function vdHideAddVehicle(){document.getElementById('vdAddVehicleBox').hidden=true;document.getElementById('vdAddMsg').textContent=''}
+function vdAddVehicle(){
+  var btn=document.getElementById('vdAddSave'),msg=document.getElementById('vdAddMsg'),permission=document.querySelector('input[name="vdAddPermission"]:checked');
+  var payload={name:document.getElementById('vdAddName').value.trim(),plate:document.getElementById('vdAddPlate').value.trim(),capacity:document.getElementById('vdAddCapacity').value,usagePermission:permission?permission.value:''};
+  if(!payload.name){msg.textContent='กรุณาระบุชื่อรถยนต์';return}
+  btn.disabled=true;msg.textContent='กำลังบันทึก...';
+  google.script.run.withSuccessHandler(function(){btn.disabled=false;document.getElementById('vdAddName').value='';document.getElementById('vdAddPlate').value='';document.getElementById('vdAddCapacity').value='';document.querySelector('input[name="vdAddPermission"][value="ALLOWED"]').checked=true;msg.textContent='เพิ่มรถยนต์เรียบร้อยแล้ว';vdLoad()})
+    .withFailureHandler(function(err){btn.disabled=false;msg.textContent=(err&&err.message)||String(err)}).addVehicle(payload,currentAdminToken());
+}
 function vdLoad(){
   document.getElementById('vdMatrix').innerHTML='<div class="loading">กำลังโหลด...</div>';
   google.script.run.withSuccessHandler(function(d){vdData=d;docWindow=d.windowDays||30;docAlerts=d.alerts||[];document.getElementById('vdWindow').textContent=docWindow;vdRender();dashboardRenderDocAlerts()})
@@ -3914,7 +3937,7 @@ function vdRender(){
   if(!vs.length){document.getElementById('vdMatrix').innerHTML='<div class="empty">ยังไม่มีรถในชีต Vehicles</div>'}else{
     var h='<div class="vd-table-wrap"><table class="vd-table"><thead><tr><th>รถ</th>'+types.map(function(t){return '<th>'+esc(t)+'</th>'}).join('')+'</tr></thead><tbody>';
     vs.forEach(function(v){
-      h+='<tr><td class="vd-veh">'+esc(v.name)+(v.plate?'<small>'+esc(v.plate)+'</small>':'')+'</td>';
+      h+='<tr><td class="vd-veh">'+esc(v.name)+(v.plate?'<small>'+esc(v.plate)+'</small>':'')+(v.usagePermission==='RESTRICTED'?'<small class="vd-restricted">รถผู้บริหาร · ไม่อนุญาตให้จอง</small>':'')+'</td>';
       types.forEach(function(t){
         var d=vdFind(v.name,t),s=vdStatus(d),sel=vdSel&&vdSel.vehicle===v.name&&vdSel.type===t;
         h+='<td><button type="button" class="vd-cell'+(sel?' sel':'')+'" data-vd-v="'+esc(v.name)+'" data-vd-t="'+esc(t)+'">'+(d&&d.expiry?'หมดอายุ '+esc(vdShort(d.expiry)):'—')+(d&&d.hasFile?' <span class="vd-pdf">📎PDF</span>':'')+'<br><span class="vd-chip '+s.cls+'">'+esc(s.txt)+'</span></button></td>';
