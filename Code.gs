@@ -151,7 +151,7 @@ function buildDailyReport_(dateKey){
   return {dateKey:dateKey,dateText:thaiLongDate_(dateKey),count:blocks.length,skippedCount:0,warnings:warnings,blocks:blocks,text:text};
 }
 function lineConfigured_(){var p=PropertiesService.getScriptProperties();return !!(p.getProperty(LINE_TOKEN_PROP_)&&p.getProperty(LINE_GROUP_PROP_));}
-function autoTriggerOn_(){try{return ScriptApp.getProjectTriggers().some(function(t){return t.getHandlerFunction()==='dailyLineReportJob';});}catch(e){return null;}}
+function autoTriggerOn_(){try{return ScriptApp.getProjectTriggers().some(function(t){return t.getHandlerFunction()==='vehicleLine24hJob';});}catch(e){return null;}}
 // อ่านอย่างเดียว: สร้างข้อความรายงานของวันที่ระบุ (ไม่ส่ง ไม่เขียนชีต)
 function getDailyReport(dateKey,adminToken){
   requireAdminSession_(adminToken);
@@ -182,30 +182,99 @@ function sendDailyReportToLine(dateKey,text,adminToken){
   appendAuditLog_('DAILY_REPORT_SENT','',admin.account,'','','',{type:'DAILY_REPORT_SENT',date:dateKey,length:text.length});
   return {ok:true};
 }
-// ฟังก์ชันที่ Trigger เรียกทุกเช้า: ส่งเฉพาะเมื่อมีรายการ และไม่ส่งซ้ำในวันเดียวกัน
-function dailyLineReportJob(){
-  var key=todayKey_(),props=PropertiesService.getScriptProperties();
-  if(props.getProperty(LINE_LASTSENT_PROP_)===key)return;
-  var rep=buildDailyReport_(key);
-  if(!rep.count)return;
-  sendLineText_(rep.text);
-  props.setProperty(LINE_LASTSENT_PROP_,key);
-  try{appendAuditLog_('DAILY_REPORT_AUTO','','system','','','',{type:'DAILY_REPORT_AUTO',date:key,trips:rep.count});}catch(e){}
+// ===== แจ้งเตือน LINE ล่วงหน้า 24 ชั่วโมงก่อนใช้รถ (ตรวจสอบทุก 5 นาที) =====
+var VEHICLE_LINE_LOG_SHEET_='VehicleLineNotifications';
+var VEHICLE_LINE_LOG_HEADERS_=['NotificationKey','RequestID','TravelDate','ScheduledAt','DepartureAt','Signature','Status','SentAt','ErrorMessage','UpdatedAt'];
+var VEHICLE_LINE_ACTIVE_STATUSES_=[STATUS.APPROVED,STATUS.ASSIGNED];
+function vehicleLineLogSheet_(){
+  var ss=ss_(),sh=ss.getSheetByName(VEHICLE_LINE_LOG_SHEET_);
+  if(!sh){sh=ss.insertSheet(VEHICLE_LINE_LOG_SHEET_);sh.getRange(1,1,1,VEHICLE_LINE_LOG_HEADERS_.length).setValues([VEHICLE_LINE_LOG_HEADERS_]);sh.setFrozenRows(1);}
+  return sh;
 }
-// เจ้าของระบบรันครั้งเดียวจาก Apps Script Editor: ตั้งเวลาส่งอัตโนมัติ ~05:30 น. ทุกวัน (คลาดเคลื่อนได้ ±15 นาที)
-function installDailyLineTrigger(){
+function vehicleTravelDates_(dateGo,dateBack){
+  var start=String(dateGo||''),end=String(dateBack||dateGo||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||!/^\d{4}-\d{2}-\d{2}$/.test(end)||end<start)return [];
+  var a=start.split('-').map(Number),b=end.split('-').map(Number),cur=new Date(Date.UTC(a[0],a[1]-1,a[2])),last=new Date(Date.UTC(b[0],b[1]-1,b[2])),out=[];
+  for(var i=0;i<370&&cur<=last;i++){out.push(Utilities.formatDate(cur,'UTC','yyyy-MM-dd'));cur.setUTCDate(cur.getUTCDate()+1);}
+  return out;
+}
+function vehicleDepartureAt_(dateKey,timeText){
+  var m=String(timeText||'').trim().match(/^(\d{1,2}):(\d{2})/);
+  if(!m)return null;var h=Number(m[1]),mi=Number(m[2]);if(h>23||mi>59)return null;
+  var p=dateKey.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2],h-7,mi,0));
+}
+function vehicleLineMessage_(r,dateKey,corrected){
+  var vehRows=rowsToObjects_(sheet_(SHEETS.VEHICLES));
+  var vehicles=String(r.vehicles||'').split(',').map(function(x){return vehicleLabel_(x,vehRows);}).filter(Boolean);
+  var driver=reportDriverName_(r),total=(Number(r.students)||0)+(Number(r.teachers)||0)+(Number(r.others)||0);
+  if(total<=0)total=Number(r.companionCount)||0;
+  var lines=[corrected?'✏️ แก้ไขข้อมูลการใช้รถโรงเรียน':'🔔 แจ้งเตือนการใช้รถโรงเรียน (ล่วงหน้า 24 ชั่วโมง)',thaiLongDate_(dateKey),'เวลา '+(r.timeGo||'-')+' น.','ผู้ขอใช้รถ: '+(r.name||'-'),'ปลายทาง: '+(r.destination||'-'),'วัตถุประสงค์: '+(r.purpose||'-')];
+  lines.push('รถที่จัด: '+(vehicles.length?vehicles.join(', '):'รอจัดรถ'));
+  lines.push('ผู้ขับรถ: '+(driver||(String(r.needDriver||'').trim()==='ต้องการ'?'รอจัดผู้ขับรถ':'ไม่ต้องการผู้ขับรถจากโรงเรียน')));
+  lines.push('ผู้ร่วมเดินทาง: '+total+' คน');lines.push('รหัสคำขอ: '+(r.id||'-'));
+  return lines.join('\n');
+}
+function vehicleLineSignature_(r,dateKey){
+  return sha256Hex_(JSON.stringify({date:dateKey,time:r.timeGo,name:r.name,destination:r.destination,purpose:r.purpose,vehicles:r.vehicles,driver:r.driver,requestedDriver:r.requestedDriver,status:r.status,students:r.students,teachers:r.teachers,others:r.others,needDriver:r.needDriver}));
+}
+function vehicleLineUpsertLog_(sh,row,values){
+  if(row)sh.getRange(row,1,1,VEHICLE_LINE_LOG_HEADERS_.length).setValues([values]);
+  else{row=sh.getLastRow()+1;sh.getRange(row,1,1,VEHICLE_LINE_LOG_HEADERS_.length).setValues([values]);}
+  return row;
+}
+// Trigger: ตรวจทุก 5 นาที และส่งแต่ละคำขอเมื่อถึงเวลา 24 ชั่วโมงก่อนออกเดินทาง
+function vehicleLine24hJob(){
+  if(!lineConfigured_())return;
+  var lock=LockService.getScriptLock();if(!lock.tryLock(10000))return;
+  try{
+    var now=new Date(),sh=vehicleLineLogSheet_(),logs=rowsToObjects_(sh),byKey={};
+    logs.forEach(function(x){byKey[String(x.NotificationKey||'')]=x;});
+    var requests=rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_),requestById={};
+    requests.forEach(function(r){requestById[r.id]=r;});
+    logs.forEach(function(log){
+      if(String(log.Status)!=='Sent')return;
+      var current=requestById[String(log.RequestID||'')];
+      if(current&&[STATUS.CANCELLED,STATUS.REJECTED].indexOf(current.status)>=0){
+        try{
+          sendLineText_('❌ ยกเลิกการใช้รถโรงเรียน\n'+thaiLongDate_(String(log.TravelDate||''))+'\nรหัสคำขอ: '+current.id+'\nผู้ขอใช้รถ: '+current.name+'\nปลายทาง: '+current.destination);
+          sh.getRange(log._row,7).setValue('Cancelled');sh.getRange(log._row,10).setValue(nowText_());
+        }catch(err){sh.getRange(log._row,9).setValue(String(err&&err.message||err));}
+      }
+    });
+    requests.forEach(function(r){
+      if(VEHICLE_LINE_ACTIVE_STATUSES_.indexOf(r.status)<0||!r.id)return;
+      vehicleTravelDates_(r.dateGo,r.dateBack).forEach(function(dateKey){
+        var departure=vehicleDepartureAt_(dateKey,r.timeGo);if(!departure)return;
+        var notifyAt=new Date(departure.getTime()-24*60*60*1000);if(now>=departure)return;
+        var key=r.id+'|'+dateKey,signature=vehicleLineSignature_(r,dateKey),old=byKey[key],row=old?old._row:null;
+        if(old&&String(old.Status)==='Sent'&&String(old.Signature)===signature)return;
+        if(now<notifyAt&&!(old&&String(old.Status)==='Sent'))return;
+        var isCorrection=!!(old&&String(old.Status)==='Sent'&&String(old.Signature)!==signature);
+        var scheduledText=Utilities.formatDate(notifyAt,'Asia/Bangkok','yyyy-MM-dd HH:mm:ss'),departureText=Utilities.formatDate(departure,'Asia/Bangkok','yyyy-MM-dd HH:mm:ss');
+        try{
+          sendLineText_(vehicleLineMessage_(r,dateKey,isCorrection));
+          var vals=[key,r.id,dateKey,scheduledText,departureText,signature,'Sent',nowText_(),'',nowText_()];
+          var savedRow=vehicleLineUpsertLog_(sh,row,vals);byKey[key]={NotificationKey:key,RequestID:r.id,TravelDate:dateKey,Signature:signature,Status:'Sent',_row:savedRow};
+          try{appendAuditLog_(isCorrection?'VEHICLE_LINE_CORRECTION':'VEHICLE_LINE_24H',r.id,'system','','','',{type:'VEHICLE_LINE_24H',travelDate:dateKey,departureAt:departureText,correction:isCorrection});}catch(e){}
+        }catch(err){
+          var valsFail=[key,r.id,dateKey,scheduledText,departureText,signature,'Failed',old?String(old.SentAt||''):'',String(err&&err.message||err).slice(0,500),nowText_()];
+          vehicleLineUpsertLog_(sh,row,valsFail);
+        }
+      });
+    });
+  }finally{lock.releaseLock();}
+}
+// รันครั้งเดียวจาก Apps Script Editor: ยกเลิก Trigger 05:30 เดิม แล้วติดตั้งตัวตรวจทุก 5 นาที
+function installVehicle24hLineTrigger(){
   removeDailyLineTrigger();
-  ScriptApp.newTrigger('dailyLineReportJob').timeBased().atHour(5).nearMinute(30).everyDays(1).inTimezone('Asia/Bangkok').create();
-  return 'ตั้งเวลาส่งอัตโนมัติแล้ว (ประมาณ 05:30 น. ทุกวัน)';
+  ScriptApp.getProjectTriggers().forEach(function(t){if(t.getHandlerFunction()==='vehicleLine24hJob')ScriptApp.deleteTrigger(t);});
+  ScriptApp.newTrigger('vehicleLine24hJob').timeBased().everyMinutes(5).create();
+  return 'เปิดระบบตรวจสอบทุก 5 นาที: แจ้งเตือนก่อนใช้รถ 24 ชั่วโมง (ยกเลิก Trigger 05:30 เดิมแล้ว)';
 }
+function installDailyLineTrigger(){return installVehicle24hLineTrigger();}
 function removeDailyLineTrigger(){
-  ScriptApp.getProjectTriggers().forEach(function(t){if(t.getHandlerFunction()==='dailyLineReportJob')ScriptApp.deleteTrigger(t);});
-  return 'ยกเลิกการส่งอัตโนมัติแล้ว';
-}
-// รันครั้งเดียวจาก Editor เพื่ออนุมัติสิทธิ์ใหม่ (UrlFetch + Trigger) ก่อน Deploy เป็นเวอร์ชันใหม่ — ไม่ส่งข้อความใดๆ
-function authorizeLineReport(){
-  var r=UrlFetchApp.fetch('https://api.line.me/v2/bot/info',{muteHttpExceptions:true});
-  return 'อนุมัติสิทธิ์แล้ว (LINE ตอบ '+r.getResponseCode()+' เป็นเรื่องปกติหากยังไม่ได้ตั้งค่า token) triggers='+ScriptApp.getProjectTriggers().length;
+  ScriptApp.getProjectTriggers().forEach(function(t){if(['dailyLineReportJob','vehicleLine24hJob'].indexOf(t.getHandlerFunction())>=0)ScriptApp.deleteTrigger(t);});
+  return 'ยกเลิก Trigger แจ้งเตือน LINE อัตโนมัติแล้ว';
 }
 // ===== V1.2.9: แบบประเมินความพึงพอใจ (เก็บในชีต Feedback สร้างให้อัตโนมัติ) =====
 var FEEDBACK_SHEET_NAME='Feedback';
