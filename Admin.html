@@ -3769,7 +3769,7 @@ function dailyGenerate(){
     var parts=[];
     document.getElementById('dailySendBtn').style.display=rep.lineConfigured?'':'none';
     parts.push(rep.lineConfigured?'การเชื่อมต่อ LINE: ตั้งค่าแล้ว':'ยังไม่เปิดใช้การส่งเข้าไลน์อัตโนมัติ — ใช้ปุ่มคัดลอกแล้วนำไปวางในไลน์ได้');
-    if(rep.lineConfigured)parts.push(rep.autoTrigger===true?'ส่งอัตโนมัติ: เปิดอยู่ (ประมาณ 05:30 น. ทุกวัน เฉพาะวันที่มีรายการ)':rep.autoTrigger===false?'ส่งอัตโนมัติ: ยังไม่เปิด':'ส่งอัตโนมัติ: ตรวจสถานะไม่ได้');
+    if(rep.lineConfigured)parts.push(rep.autoTrigger===true?'แจ้งเตือนอัตโนมัติ: เปิดอยู่ (ตรวจทุก 5 นาที ส่งก่อนใช้รถ 24 ชั่วโมง)':rep.autoTrigger===false?'แจ้งเตือนอัตโนมัติ: ยังไม่เปิด':'แจ้งเตือนอัตโนมัติ: ตรวจสถานะไม่ได้');
     st.textContent=parts.join(' • ');
   }).withFailureHandler(function(err){ta.value='';warn.hidden=false;warn.textContent='สร้างรายงานไม่สำเร็จ: '+((err&&err.message)||err)}).getDailyReport(key,currentAdminToken());
 }
