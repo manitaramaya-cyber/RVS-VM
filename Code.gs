@@ -63,6 +63,36 @@ function doGet(e){
   var key=e&&e.parameter&&e.parameter.key;
   return HtmlService.createTemplateFromFile(key===ADMIN_KEY?'Admin':'Calendar').evaluate().setTitle('ระบบจองรถยนต์โรงเรียน RAV').addMetaTag('viewport','width=device-width, initial-scale=1, viewport-fit=cover').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
+// LINE Messaging API Webhook: ใช้ shared key ใน query string เพราะ Apps Script Web App อ่าน request headers ไม่ได้
+function doPost(e){
+  try{
+    var props=PropertiesService.getScriptProperties();
+    var expected=props.getProperty('LINE_WEBHOOK_KEY');
+    var supplied=e&&e.parameter&&String(e.parameter.hook||'');
+    if(!expected||!supplied||supplied!==expected)return ContentService.createTextOutput(JSON.stringify({ok:false})).setMimeType(ContentService.MimeType.JSON);
+    var raw=e&&e.postData&&e.postData.contents?e.postData.contents:'{}',body=JSON.parse(raw),events=Array.isArray(body.events)?body.events:[];
+    var captured='';
+    events.forEach(function(ev){
+      var source=ev&&ev.source;
+      if(source&&source.type==='group'&&source.groupId)captured=String(source.groupId);
+    });
+    if(captured){
+      props.setProperty('LINE_GROUP_ID',captured);
+      props.setProperty('LINE_WEBHOOK_LAST_EVENT_AT',Utilities.formatDate(new Date(),'Asia/Bangkok','yyyy-MM-dd HH:mm:ss'));
+    }
+    return ContentService.createTextOutput(JSON.stringify({ok:true,groupCaptured:!!captured})).setMimeType(ContentService.MimeType.JSON);
+  }catch(err){
+    // ตอบ 200 เพื่อไม่ให้ LINE retry วนไม่สิ้นสุด; รายละเอียดเก็บใน execution log
+    console.error('LINE webhook error: '+String(err&&err.stack||err));
+    return ContentService.createTextOutput(JSON.stringify({ok:false})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+// รันครั้งเดียวเพื่อสร้าง shared key สำหรับ Webhook URL; ไม่เกี่ยวกับ Channel Access Token
+function createLineWebhookKey(){
+  var props=PropertiesService.getScriptProperties(),key=props.getProperty('LINE_WEBHOOK_KEY');
+  if(!key){key=Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'');props.setProperty('LINE_WEBHOOK_KEY',key);}
+  return key;
+}
 function include(filename){return HtmlService.createHtmlOutputFromFile(filename).getContent();}
 function ss_(){return SpreadsheetApp.getActiveSpreadsheet();}
 function sheet_(name){var sh=ss_().getSheetByName(name);if(!sh)throw new Error('ไม่พบชีทชื่อ "'+name+'" กรุณาสร้างชีทนี้ก่อน');return sh;}
