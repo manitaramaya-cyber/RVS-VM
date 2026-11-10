@@ -234,15 +234,23 @@ function vehicleDepartureAt_(dateKey,timeText){
   var p=dateKey.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2],h-7,mi,0));
 }
 function vehicleLineMessage_(r,dateKey,corrected){
+  // ใช้รูปแบบเดียวกับ buildDailyReport_() แต่แสดงเฉพาะคำขอที่ถึงกำหนดแจ้งเตือน
   var vehRows=rowsToObjects_(sheet_(SHEETS.VEHICLES));
-  var vehicles=String(r.vehicles||'').split(',').map(function(x){return vehicleLabel_(x,vehRows);}).filter(Boolean);
-  var driver=reportDriverName_(r),total=(Number(r.students)||0)+(Number(r.teachers)||0)+(Number(r.others)||0);
+  var vlist=String(r.vehicles||'').split(',').map(function(x){return vehicleLabel_(x,vehRows);}).filter(Boolean);
+  var drv=reportDriverName_(r);
+  var total=(Number(r.students)||0)+(Number(r.teachers)||0)+(Number(r.others)||0);
   if(total<=0)total=Number(r.companionCount)||0;
-  var lines=[corrected?'✏️ แก้ไขข้อมูลการใช้รถโรงเรียน':'🔔 แจ้งเตือนการใช้รถโรงเรียน (ล่วงหน้า 24 ชั่วโมง)',thaiLongDate_(dateKey),'เวลา '+(r.timeGo||'-')+' น.','ผู้ขอใช้รถ: '+(r.name||'-'),'ปลายทาง: '+(r.destination||'-'),'วัตถุประสงค์: '+(r.purpose||'-')];
-  lines.push('รถที่จัด: '+(vehicles.length?vehicles.join(', '):'รอจัดรถ'));
-  lines.push('ผู้ขับรถ: '+(driver||(String(r.needDriver||'').trim()==='ต้องการ'?'รอจัดผู้ขับรถ':'ไม่ต้องการผู้ขับรถจากโรงเรียน')));
-  lines.push('ผู้ร่วมเดินทาง: '+total+' คน');lines.push('รหัสคำขอ: '+(r.id||'-'));
-  return lines.join('\n');
+  var purpose=String(r.purpose||'').trim(),dest=String(r.destination||'').trim();
+  var what=purpose+((dest&&purpose.indexOf(dest)<0)?' ณ '+dest:'');
+  var lines=['เวลา '+(r.timeGo||'-')+' น.'];
+  if(vlist.length)vlist.forEach(function(v){lines.push('🚐'+v);});
+  else lines.push('🚐รอจัดรถ');
+  if(drv)lines.push('🙎🏻ผู้ขับรถ  '+drv);
+  else if(String(r.needDriver||'').trim()==='ต้องการ')lines.push('🙎🏻ผู้ขับรถ  รอจัดผู้ขับรถ');
+  else lines.push('🙎🏻ผู้ขับรถ  ไม่ต้องการผู้ขับรถจากโรงเรียน');
+  lines.push('');lines.push('-'+what);lines.push('ผู้ร่วมเดินทาง '+total+' คน');
+  var heading=corrected?'✏️ แจ้งการใช้รถโรงเรียน (มีการแก้ไข)':'แจ้งการใช้รถโรงเรียน';
+  return heading+'\n'+thaiLongDate_(dateKey)+'\n\n'+lines.join('\n')+'\n\n🙏🏻ขอบคุณครับ🙏🏻';
 }
 function vehicleLineSignature_(r,dateKey){
   return sha256Hex_(JSON.stringify({date:dateKey,time:r.timeGo,name:r.name,destination:r.destination,purpose:r.purpose,vehicles:r.vehicles,driver:r.driver,requestedDriver:r.requestedDriver,status:r.status,students:r.students,teachers:r.teachers,others:r.others,needDriver:r.needDriver}));
