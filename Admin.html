@@ -1051,7 +1051,7 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
         </div>
         <div class="field">
           <label>เวลาไป</label>
-          <input type="text" id="timeGo" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="กรอกเวลาแบบ 24 ชั่วโมง เช่น 08:30 หรือ 17:45">
+          <input type="text" id="timeGo" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3])\.[0-5][0-9]" placeholder="HH.MM" title="กรอกเวลาแบบ 24 ชั่วโมง เช่น 08.30 หรือ 17.45">
         </div>
       </div>
       <div class="row2">
@@ -1061,7 +1061,7 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
         </div>
         <div class="field">
           <label>เวลากลับ</label>
-          <input type="text" id="timeBack" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="กรอกเวลาแบบ 24 ชั่วโมง เช่น 08:30 หรือ 17:45">
+          <input type="text" id="timeBack" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3])\.[0-5][0-9]" placeholder="HH.MM" title="กรอกเวลาแบบ 24 ชั่วโมง เช่น 08.30 หรือ 17.45">
         </div>
       </div>
       <div class="field">
@@ -2385,7 +2385,9 @@ function drvIsActive(o){
 }
 function pad2(n){ return String(n).padStart(2, '0'); }
 function hhmm(v){ return String(v || '').replace(/^(\d):/, '0$1:').slice(0, 5); }
-function isValid24HourTime(v){ return /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(String(v || '').trim()); }
+function isValid24HourTime(v){ return /^(?:[01][0-9]|2[0-3])\.[0-5][0-9]$/.test(String(v || '').trim()); }
+function timeDotToColon(v){ return String(v || '').trim().replace('.', ':'); }
+function timeColonToDot(v){ return String(v || '').trim().replace(':', '.'); }
 function isValidLocalDateTime(v){
   var m = String(v || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/);
   if(!m){ return false; }
@@ -2696,8 +2698,8 @@ function editPanelHtml(r){
     '<div class="row2">' + edInput('ตำแหน่ง', 'ed-position', r.position, 'text', ' maxlength="120"') + edInput('สังกัด', 'ed-department', r.department, 'text', ' maxlength="120"') + '</div>' +
     edInput('ขอใช้รถเดินทางไปที่', 'ed-destination', r.destination, 'text', ' maxlength="250"') +
     edText('วัตถุประสงค์', 'ed-purpose', r.purpose) +
-    '<div class="row2">' + edInput('วันที่ไป', 'ed-dateGo', r.dateGo, 'date') + edInput('เวลาไป', 'ed-timeGo', hhmm(r.timeGo), 'text', ' inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลาแบบ 24 ชั่วโมง เช่น 08:30"') + '</div>' +
-    '<div class="row2">' + edInput('วันที่กลับ', 'ed-dateBack', r.dateBack, 'date') + edInput('เวลากลับ', 'ed-timeBack', hhmm(r.timeBack), 'text', ' inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลาแบบ 24 ชั่วโมง เช่น 17:45"') + '</div>' +
+    '<div class="row2">' + edInput('วันที่ไป', 'ed-dateGo', r.dateGo, 'date') + edInput('เวลาไป', 'ed-timeGo', timeColonToDot(hhmm(r.timeGo)), 'text', ' inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3])\\.[0-5][0-9]" placeholder="HH.MM" title="เวลาแบบ 24 ชั่วโมง เช่น 08.30"') + '</div>' +
+    '<div class="row2">' + edInput('วันที่กลับ', 'ed-dateBack', r.dateBack, 'date') + edInput('เวลากลับ', 'ed-timeBack', timeColonToDot(hhmm(r.timeBack)), 'text', ' inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3])\\.[0-5][0-9]" placeholder="HH.MM" title="เวลาแบบ 24 ชั่วโมง เช่น 17.45"') + '</div>' +
     '<div class="field"><label>ต้องการคนขับ</label><select class="ed-needDriver"><option value="1"' + (nd ? ' selected' : '') + '>ต้องการ</option><option value="0"' + (nd ? '' : ' selected') + '>ไม่ต้องการ</option></select></div>' +
     '<div class="ed-reqDriverBox">' + edInput('ชื่อผู้ขับรถที่ผู้ขอระบุ (กรณีไม่ต้องการคนขับจากโรงเรียน)', 'ed-requestedDriver', r.requestedDriver, 'text', ' maxlength="120"') + '</div>' +
     edInput('เบอร์โทรศัพท์ผู้ขอใช้รถ', 'ed-requesterPhone', r.requesterPhone, 'tel', ' maxlength="20"') +
@@ -2716,7 +2718,7 @@ function readEditForm(card){
   return {
     staffId: v('.ed-staffId'), name: v('.ed-name'), position: v('.ed-position'), department: v('.ed-department'),
     destination: v('.ed-destination'), purpose: v('.ed-purpose'),
-    dateGo: v('.ed-dateGo'), timeGo: v('.ed-timeGo'), dateBack: v('.ed-dateBack'), timeBack: v('.ed-timeBack'),
+    dateGo: v('.ed-dateGo'), timeGo: timeDotToColon(v('.ed-timeGo')), dateBack: v('.ed-dateBack'), timeBack: timeDotToColon(v('.ed-timeBack')),
     needDriver: v('.ed-needDriver'), requestedDriver: v('.ed-requestedDriver'), requesterPhone: v('.ed-requesterPhone'),
     companionCount: Number(v('.ed-companionCount')) || 0, companionNames: v('.ed-companionNames'),
     students: Number(v('.ed-students')) || 0, teachers: Number(v('.ed-teachers')) || 0, others: Number(v('.ed-others')) || 0,
@@ -2774,7 +2776,7 @@ function attachCardTools(){
         var rec = Object.assign({}, r, {
           staffId: f.staffId, name: f.name, position: f.position, department: f.department,
           destination: f.destination, purpose: f.purpose,
-          dateGo: f.dateGo, timeGo: f.timeGo, dateBack: f.dateBack, timeBack: f.timeBack,
+          dateGo: f.dateGo, timeGo: timeDotToColon(f.timeGo), dateBack: f.dateBack, timeBack: timeDotToColon(f.timeBack),
           needDriver: need ? 'ต้องการ' : 'ไม่ต้องการ', requestedDriver: need ? '' : f.requestedDriver,
           driver: need ? r.driver : '', requesterPhone: f.requesterPhone,
           companionCount: f.companionCount, companionNames: f.companionNames,
