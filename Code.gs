@@ -408,7 +408,7 @@ function getDocVehicles_(){
   var plateCols=['ป้ายทะเบียน','ทะเบียน','เลขทะเบียน'];
   return rowsToObjects_(sheet_(SHEETS.VEHICLES)).map(function(v){
     var plate='';for(var i=0;i<plateCols.length&&!plate;i++)plate=String(v[plateCols[i]]||'').trim();
-    return {name:String(v['ชื่อรถ']||'').trim(),plate:plate};
+    return {name:String(v['ชื่อรถ']||'').trim(),plate:plate,usagePermission:vehiclePermission_(v)};
   }).filter(function(v){return v.name;});
 }
 function docToClient_(d){return {id:d.id,vehicle:d.vehicle,type:d.type,docNo:d.docNo,expiry:d.expiry,hasFile:!!d.fileId,fileId:d.fileId,fileName:d.fileName,note:d.note,ackExpiry:d.ackExpiry,ackBy:d.ackBy,ackAt:d.ackAt,updatedBy:d.updatedBy,updatedAt:d.updatedAt,daysLeft:daysUntil_(d.expiry)};}
@@ -606,7 +606,27 @@ function resolveMaintenanceAlert(id,action,adminToken){
     return {ok:true,status:st};
   }finally{lock.releaseLock();}
 }
-function getVehicles(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.VEHICLES));}
+var VEHICLE_PERMISSION_COL_='สิทธิ์การใช้งาน';
+function vehiclePermission_(v){var p=String(v&&v[VEHICLE_PERMISSION_COL_]||'').trim().toUpperCase();return p==='RESTRICTED'?'RESTRICTED':'ALLOWED';}
+function getVehicles(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.VEHICLES)).map(function(v){v.usagePermission=vehiclePermission_(v);return v;});}
+function addVehicle(payload,adminToken){
+  var admin=requireAdminSession_(adminToken),p=payload||{},name=String(p.name||'').trim().slice(0,120),plate=String(p.plate||'').trim().slice(0,40);
+  var capacity=String(p.capacity==null?'':p.capacity).trim(),permission=String(p.usagePermission||'').trim().toUpperCase();
+  if(!name)throw new Error('กรุณาระบุชื่อรถยนต์');if(['ALLOWED','RESTRICTED'].indexOf(permission)<0)throw new Error('กรุณาเลือกสิทธิ์การใช้งานรถ');
+  if(capacity!==''&&(!/^\d+$/.test(capacity)||Number(capacity)<=0))throw new Error('จำนวนที่นั่งต้องเป็นตัวเลขมากกว่า 0');
+  var lock=LockService.getScriptLock();lock.waitLock(15000);
+  try{
+    var sh=sheet_(SHEETS.VEHICLES),headers=sh.getRange(1,1,1,Math.max(sh.getLastColumn(),1)).getValues()[0].map(function(x){return String(x||'').trim();});
+    if(headers.indexOf('ชื่อรถ')<0)throw new Error('ไม่พบคอลัมน์ "ชื่อรถ" ในชีต Vehicles');
+    if(rowsToObjects_(sh).some(function(v){return String(v['ชื่อรถ']||'').trim().toLowerCase()===name.toLowerCase();}))throw new Error('มีชื่อรถนี้ในระบบแล้ว');
+    function ensureHeader(h){var i=headers.indexOf(h);if(i>=0)return i;var col=headers.length+1;if(sh.getMaxColumns()<col)sh.insertColumnAfter(sh.getMaxColumns());sh.getRange(1,col).setValue(h);headers.push(h);return col-1;}
+    var permissionIdx=ensureHeader(VEHICLE_PERMISSION_COL_),plateHeader=['ป้ายทะเบียน','ทะเบียน','เลขทะเบียน'].filter(function(h){return headers.indexOf(h)>=0;})[0]||'ป้ายทะเบียน';
+    var plateIdx=ensureHeader(plateHeader),capacityIdx=headers.indexOf('ความจุ');if(capacity!==''&&capacityIdx<0)capacityIdx=ensureHeader('ความจุ');
+    var row=new Array(headers.length).fill('');row[headers.indexOf('ชื่อรถ')]=name;row[plateIdx]=plate;row[permissionIdx]=permission;if(capacityIdx>=0&&capacity!=='')row[capacityIdx]=Number(capacity);
+    sh.appendRow(row);try{appendAuditLog_('VEHICLE_CREATE','',admin.account,'','',name,{type:'VEHICLE_CREATE',vehicle:name,plate:plate,capacity:capacity,usagePermission:permission});}catch(e){}
+    return {ok:true,name:name,usagePermission:permission};
+  }finally{lock.releaseLock();}
+}
 function getDrivers(adminToken){requireAdminSession_(adminToken);return getDriverNames_().map(function(n){return {name:n};});}
 function getDriverNames_(){
   var sh=sheet_(SHEETS.DRIVERS),values=sh.getDataRange().getValues();
@@ -760,6 +780,8 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
     var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],rows=rowsToObjects_(sh),target=rows.find(function(r){return String(r.id)===String(id);});
     if(!target)throw new Error('ไม่พบคำขอรหัส: '+id);
     function col(n){var i=headers.indexOf(n);if(i<0)throw new Error('ไม่พบคอลัมน์ '+n+' ในชีต Requests');return i+1;}
+    var selectedVehicleNames=String(vehiclesCsv||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+    if(selectedVehicleNames.length){var fleet=rowsToObjects_(sheet_(SHEETS.VEHICLES));selectedVehicleNames.forEach(function(n){var found=null;fleet.forEach(function(v){if(String(v['ชื่อรถ']||'').trim()===n)found=v;});if(!found)throw new Error('ไม่พบรถ "'+n+'" ในทะเบียนรถ');if(vehiclePermission_(found)==='RESTRICTED')throw new Error('รถ '+n+' เป็นรถผู้บริหาร ไม่สามารถนำมาจัดสรรให้คำขอใช้รถได้');});}
     var driverToSet=null,dutyFrom='',dutyTo='';
     if(driver!==undefined&&driver!==null){
       driver=String(driver).trim();
@@ -792,7 +814,7 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
     return {ok:true};
   } finally {lock.releaseLock();}
 }
-function forecastVehicles(students,teachers,others,adminToken){requireAdminSession_(adminToken);var vehicles=getVehicles(adminToken).sort(function(a,b){return Number(b['ความจุ'])-Number(a['ความจุ']);}),groups=[{label:'นักเรียน',count:Number(students)||0},{label:'ครู',count:Number(teachers)||0},{label:'อื่นๆ',count:Number(others)||0}].filter(function(g){return g.count>0;}),plan=[],cautions=[],i=0,current=vehicles[0],remain=current?Number(current['ความจุ']):0,open=null;groups.forEach(function(g){var left=g.count;while(left>0&&current){var take=Math.min(left,remain);if(!open||open.vehicle!==current['ชื่อรถ']){open={vehicle:current['ชื่อรถ'],count:0,detail:[]};plan.push(open);}open.count+=take;open.detail.push(g.label+' '+take+' คน');left-=take;remain-=take;if(remain<=0){current=vehicles[++i];remain=current?Number(current['ความจุ']):0;open=null;}}if(left>0)cautions.push('รถในกองรถไม่พอสำหรับ'+g.label+'อีก '+left+' คน — ต้องพิจารณาวิ่งเพิ่มเที่ยว หรือหาทางเลือกอื่น');});plan.forEach(function(p){var v=vehicles.find(function(x){return x['ชื่อรถ']===p.vehicle;});if(v&&Number(v['ความจุ'])>=13&&p.count<=Number(v['ความจุ'])*.25)cautions.push(p.vehicle+' บรรทุกแค่ '+p.count+' คน (จุได้ '+v['ความจุ']+') — ลองย้ายไปรวมกับคันอื่นที่ยังมีที่ว่างแทนได้');});if(plan.filter(function(p){return p.vehicle.indexOf('หกล้อ')>-1;}).length>=2)cautions.push('ถ้าระยะทางใกล้พอให้รถหกล้อวิ่ง 2 เที่ยวทันเวลา อาจลดจำนวนรถที่ใช้ได้ — ควรโทรถามครูผู้ขอเรื่องระยะเวลาก่อนตัดสินใจ');return {plan:plan,cautions:cautions};}
+function forecastVehicles(students,teachers,others,adminToken){requireAdminSession_(adminToken);var vehicles=getVehicles(adminToken).filter(function(v){return v.usagePermission!=='RESTRICTED';}).sort(function(a,b){return Number(b['ความจุ'])-Number(a['ความจุ']);}),groups=[{label:'นักเรียน',count:Number(students)||0},{label:'ครู',count:Number(teachers)||0},{label:'อื่นๆ',count:Number(others)||0}].filter(function(g){return g.count>0;}),plan=[],cautions=[],i=0,current=vehicles[0],remain=current?Number(current['ความจุ']):0,open=null;groups.forEach(function(g){var left=g.count;while(left>0&&current){var take=Math.min(left,remain);if(!open||open.vehicle!==current['ชื่อรถ']){open={vehicle:current['ชื่อรถ'],count:0,detail:[]};plan.push(open);}open.count+=take;open.detail.push(g.label+' '+take+' คน');left-=take;remain-=take;if(remain<=0){current=vehicles[++i];remain=current?Number(current['ความจุ']):0;open=null;}}if(left>0)cautions.push('รถในกองรถไม่พอสำหรับ'+g.label+'อีก '+left+' คน — ต้องพิจารณาวิ่งเพิ่มเที่ยว หรือหาทางเลือกอื่น');});plan.forEach(function(p){var v=vehicles.find(function(x){return x['ชื่อรถ']===p.vehicle;});if(v&&Number(v['ความจุ'])>=13&&p.count<=Number(v['ความจุ'])*.25)cautions.push(p.vehicle+' บรรทุกแค่ '+p.count+' คน (จุได้ '+v['ความจุ']+') — ลองย้ายไปรวมกับคันอื่นที่ยังมีที่ว่างแทนได้');});if(plan.filter(function(p){return p.vehicle.indexOf('หกล้อ')>-1;}).length>=2)cautions.push('ถ้าระยะทางใกล้พอให้รถหกล้อวิ่ง 2 เที่ยวทันเวลา อาจลดจำนวนรถที่ใช้ได้ — ควรโทรถามครูผู้ขอเรื่องระยะเวลาก่อนตัดสินใจ');return {plan:plan,cautions:cautions};}
 
 function getAuditSheet_(){var ss=ss_(),sh=ss.getSheetByName(AUDIT_SHEET_NAME);if(!sh){sh=ss.insertSheet(AUDIT_SHEET_NAME);sh.appendRow(['logId','timestamp','action','requestId','admin','oldStatus','newStatus','vehicles','detail']);sh.setFrozenRows(1);}return sh;}
 function appendAuditLog_(action,requestId,admin,oldStatus,newStatus,vehicles,detail){var sh=getAuditSheet_(),logId='LOG-'+Utilities.getUuid().substring(0,8).toUpperCase();sh.appendRow([logId,new Date(),action||'',requestId||'',admin||'',oldStatus||'',newStatus||'',vehicles||'',typeof detail==='string'?detail:JSON.stringify(detail||{})]);return logId;}
