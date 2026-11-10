@@ -1051,7 +1051,7 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
         </div>
         <div class="field">
           <label>เวลาไป</label>
-          <input type="time" id="timeGo">
+          <input type="text" id="timeGo" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="กรอกเวลาแบบ 24 ชั่วโมง เช่น 08:30 หรือ 17:45">
         </div>
       </div>
       <div class="row2">
@@ -1061,7 +1061,7 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
         </div>
         <div class="field">
           <label>เวลากลับ</label>
-          <input type="time" id="timeBack">
+          <input type="text" id="timeBack" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="กรอกเวลาแบบ 24 ชั่วโมง เช่น 08:30 หรือ 17:45">
         </div>
       </div>
       <div class="field">
@@ -1913,6 +1913,11 @@ document
           'block';
         return;
       }
+      if((data.timeGo && !isValid24HourTime(data.timeGo)) || (data.timeBack && !isValid24HourTime(data.timeBack))){
+        errBox.textContent = 'กรุณากรอกเวลาเป็นรูปแบบ 24 ชั่วโมง HH:MM (00:00–23:59)';
+        errBox.style.display = 'block';
+        return;
+      }
       if(
         !data.name ||
         !data.destination ||
@@ -2380,6 +2385,13 @@ function drvIsActive(o){
 }
 function pad2(n){ return String(n).padStart(2, '0'); }
 function hhmm(v){ return String(v || '').replace(/^(\d):/, '0$1:').slice(0, 5); }
+function isValid24HourTime(v){ return /^(?:[01][0-9]|2[0-3]):[0-5][0-9]$/.test(String(v || '').trim()); }
+function isValidLocalDateTime(v){
+  var m = String(v || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/);
+  if(!m){ return false; }
+  var d = new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), Number(m[4]), Number(m[5]));
+  return d.getFullYear() === Number(m[1]) && d.getMonth() === Number(m[2])-1 && d.getDate() === Number(m[3]) && d.getHours() === Number(m[4]) && d.getMinutes() === Number(m[5]);
+}
 function addMinutesLocal(str, mins){
   var d = new Date(str);
   if(isNaN(d.getTime())){ return ''; }
@@ -2407,9 +2419,9 @@ function dutyInputsHtml(r){
   var d = dutyDefaults(r);
   return '<div class="duty-box">' +
     '<div><label>ปฏิบัติหน้าที่ขับรถตั้งแต่</label>' +
-    '<input type="datetime-local" class="dutyFrom" value="' + esc(d.from) + '" data-prev="' + esc(d.from) + '"></div>' +
+    '<input type="text" class="dutyFrom" inputmode="numeric" maxlength="16" placeholder="YYYY-MM-DDTHH:mm" title="กรอกวันและเวลาแบบ 24 ชั่วโมง เช่น 2026-11-10T08:30" value="' + esc(d.from) + '" data-prev="' + esc(d.from) + '"></div>' +
     '<div><label>ถึง</label>' +
-    '<input type="datetime-local" class="dutyTo" value="' + esc(d.to) + '" data-prev="' + esc(d.to) + '"></div>' +
+    '<input type="text" class="dutyTo" inputmode="numeric" maxlength="16" placeholder="YYYY-MM-DDTHH:mm" title="กรอกวันและเวลาแบบ 24 ชั่วโมง เช่น 2026-11-10T17:45" value="' + esc(d.to) + '" data-prev="' + esc(d.to) + '"></div>' +
     '<div class="drv-hint duty-note">ระบุช่วงเวลาที่คนขับต้องขับจริง จัดคนเดิมวันเดียวกันได้ถ้าเวลาไม่ทับกัน</div>' +
     '<div class="drv-hint duty-warn" style="display:none;color:#F0A79E"></div>' +
   '</div>';
@@ -2500,7 +2512,8 @@ function updateDutyWarn(card){
   var df = card.querySelector('.dutyFrom'), dt = card.querySelector('.dutyTo');
   var msg = '';
   if(r && val && df && dt && df.value && dt.value){
-    if(df.value >= dt.value){ msg = '⚠ เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มปฏิบัติหน้าที่'; }
+    if(!isValidLocalDateTime(df.value) || !isValidLocalDateTime(dt.value)){ msg = '⚠ กรุณากรอกวันและเวลาเป็น YYYY-MM-DDTHH:mm (24 ชั่วโมง)'; }
+    else if(df.value >= dt.value){ msg = '⚠ เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มปฏิบัติหน้าที่'; }
     else {
       var cf = findDriverConflicts(r, val, df.value, dt.value);
       if(cf.length){ msg = '⚠ ซ้อนกับรายการของ ' + (cf[0].name || '-') + ' (' + drvRangeText(cf[0]) + ') — ต้องแก้ไขรายการใดรายการหนึ่งก่อนบันทึก'; }
@@ -2603,6 +2616,7 @@ function attachRowButtons(){
           var dutyFromVal = dutyFromEl ? dutyFromEl.value : '', dutyToVal = dutyToEl ? dutyToEl.value : '';
           if(drvSel && driverValue){
             if(!dutyFromVal || !dutyToVal){ alert('กรุณาระบุวันและเวลาที่พนักงานขับรถปฏิบัติหน้าที่ (ตั้งแต่ - ถึง)'); return; }
+            if(!isValidLocalDateTime(dutyFromVal) || !isValidLocalDateTime(dutyToVal)){ alert('กรุณากรอกวันและเวลาเป็น YYYY-MM-DDTHH:mm เช่น 2026-11-10T08:30'); return; }
             if(dutyFromVal >= dutyToVal){ alert('เวลาสิ้นสุดการปฏิบัติหน้าที่ต้องอยู่หลังเวลาเริ่มต้น'); return; }
           }
           if(
@@ -2682,8 +2696,8 @@ function editPanelHtml(r){
     '<div class="row2">' + edInput('ตำแหน่ง', 'ed-position', r.position, 'text', ' maxlength="120"') + edInput('สังกัด', 'ed-department', r.department, 'text', ' maxlength="120"') + '</div>' +
     edInput('ขอใช้รถเดินทางไปที่', 'ed-destination', r.destination, 'text', ' maxlength="250"') +
     edText('วัตถุประสงค์', 'ed-purpose', r.purpose) +
-    '<div class="row2">' + edInput('วันที่ไป', 'ed-dateGo', r.dateGo, 'date') + edInput('เวลาไป', 'ed-timeGo', hhmm(r.timeGo), 'time') + '</div>' +
-    '<div class="row2">' + edInput('วันที่กลับ', 'ed-dateBack', r.dateBack, 'date') + edInput('เวลากลับ', 'ed-timeBack', hhmm(r.timeBack), 'time') + '</div>' +
+    '<div class="row2">' + edInput('วันที่ไป', 'ed-dateGo', r.dateGo, 'date') + edInput('เวลาไป', 'ed-timeGo', hhmm(r.timeGo), 'text', ' inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลาแบบ 24 ชั่วโมง เช่น 08:30"') + '</div>' +
+    '<div class="row2">' + edInput('วันที่กลับ', 'ed-dateBack', r.dateBack, 'date') + edInput('เวลากลับ', 'ed-timeBack', hhmm(r.timeBack), 'text', ' inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="HH:MM" title="เวลาแบบ 24 ชั่วโมง เช่น 17:45"') + '</div>' +
     '<div class="field"><label>ต้องการคนขับ</label><select class="ed-needDriver"><option value="1"' + (nd ? ' selected' : '') + '>ต้องการ</option><option value="0"' + (nd ? '' : ' selected') + '>ไม่ต้องการ</option></select></div>' +
     '<div class="ed-reqDriverBox">' + edInput('ชื่อผู้ขับรถที่ผู้ขอระบุ (กรณีไม่ต้องการคนขับจากโรงเรียน)', 'ed-requestedDriver', r.requestedDriver, 'text', ' maxlength="120"') + '</div>' +
     edInput('เบอร์โทรศัพท์ผู้ขอใช้รถ', 'ed-requesterPhone', r.requesterPhone, 'tel', ' maxlength="20"') +
@@ -2735,6 +2749,7 @@ function attachCardTools(){
       save.addEventListener('click', function(){
         var f = readEditForm(card);
         if(!f.name.trim() || !f.destination.trim() || !f.purpose.trim() || !f.dateGo || !f.timeGo){ alert('กรุณากรอกชื่อ ปลายทาง วัตถุประสงค์ วันที่ไป และเวลาไป'); return; }
+        if(!isValid24HourTime(f.timeGo) || (f.timeBack && !isValid24HourTime(f.timeBack))){ alert('กรุณากรอกเวลาเป็นรูปแบบ 24 ชั่วโมง HH:MM (00:00–23:59)'); return; }
         if(f.needDriver !== '1' && !f.requestedDriver.trim()){ alert('กรณีไม่ต้องการคนขับจากโรงเรียน กรุณาระบุชื่อผู้ขับรถ'); return; }
         if(f.dateBack && f.dateBack < f.dateGo){ alert('วันที่กลับต้องไม่อยู่ก่อนวันที่เดินทางไป'); return; }
         save.disabled = true; save.textContent = 'กำลังบันทึก...';
