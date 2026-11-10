@@ -249,7 +249,7 @@ function vehicleLineMessage_(r,dateKey,corrected){
   else if(String(r.needDriver||'').trim()==='ต้องการ')lines.push('🙎🏻ผู้ขับรถ  รอจัดผู้ขับรถ');
   else lines.push('🙎🏻ผู้ขับรถ  ไม่ต้องการผู้ขับรถจากโรงเรียน');
   lines.push('');lines.push('-'+what);lines.push('ผู้ร่วมเดินทาง '+total+' คน');
-  var heading=corrected?'✏️ แจ้งการใช้รถโรงเรียน (มีการแก้ไข)':'แจ้งการใช้รถโรงเรียน';
+  var heading='แจ้งการใช้รถโรงเรียน';
   return heading+'\n'+thaiLongDate_(dateKey)+'\n\n'+lines.join('\n')+'\n\n🙏🏻ขอบคุณครับ🙏🏻';
 }
 function vehicleLineSignature_(r,dateKey){
