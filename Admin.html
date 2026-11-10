@@ -1914,7 +1914,7 @@ document
         return;
       }
       if((data.timeGo && !isValid24HourTime(data.timeGo)) || (data.timeBack && !isValid24HourTime(data.timeBack))){
-        errBox.textContent = 'กรุณากรอกเวลาเป็นรูปแบบ 24 ชั่วโมง HH:MM (00:00–23:59)';
+        errBox.textContent = 'กรุณากรอกเวลาเป็นรูปแบบ 24 ชั่วโมง HH.MM (00.00–23.59)';
         errBox.style.display = 'block';
         return;
       }
@@ -1984,7 +1984,7 @@ document
             (err.message || err);
           errBox.style.display = 'block';
         })
-        .saveRequestWithAudit(data, currentAdminToken());
+        .saveRequestWithAudit(Object.assign({}, data, {timeGo:timeDotToColon(data.timeGo), timeBack:timeDotToColon(data.timeBack)}), currentAdminToken());
     }
   );
 function loadRequests(callback){
@@ -2718,7 +2718,7 @@ function readEditForm(card){
   return {
     staffId: v('.ed-staffId'), name: v('.ed-name'), position: v('.ed-position'), department: v('.ed-department'),
     destination: v('.ed-destination'), purpose: v('.ed-purpose'),
-    dateGo: v('.ed-dateGo'), timeGo: timeDotToColon(v('.ed-timeGo')), dateBack: v('.ed-dateBack'), timeBack: timeDotToColon(v('.ed-timeBack')),
+    dateGo: v('.ed-dateGo'), timeGo: v('.ed-timeGo'), dateBack: v('.ed-dateBack'), timeBack: v('.ed-timeBack'),
     needDriver: v('.ed-needDriver'), requestedDriver: v('.ed-requestedDriver'), requesterPhone: v('.ed-requesterPhone'),
     companionCount: Number(v('.ed-companionCount')) || 0, companionNames: v('.ed-companionNames'),
     students: Number(v('.ed-students')) || 0, teachers: Number(v('.ed-teachers')) || 0, others: Number(v('.ed-others')) || 0,
