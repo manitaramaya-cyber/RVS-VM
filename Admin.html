@@ -2751,7 +2751,7 @@ function attachCardTools(){
       save.addEventListener('click', function(){
         var f = readEditForm(card);
         if(!f.name.trim() || !f.destination.trim() || !f.purpose.trim() || !f.dateGo || !f.timeGo){ alert('กรุณากรอกชื่อ ปลายทาง วัตถุประสงค์ วันที่ไป และเวลาไป'); return; }
-        if(!isValid24HourTime(f.timeGo) || (f.timeBack && !isValid24HourTime(f.timeBack))){ alert('กรุณากรอกเวลาเป็นรูปแบบ 24 ชั่วโมง HH:MM (00:00–23:59)'); return; }
+        if(!isValid24HourTime(f.timeGo) || (f.timeBack && !isValid24HourTime(f.timeBack))){ alert('กรุณากรอกเวลาเป็นรูปแบบ 24 ชั่วโมง HH.MM (00.00–23.59)'); return; }
         if(f.needDriver !== '1' && !f.requestedDriver.trim()){ alert('กรณีไม่ต้องการคนขับจากโรงเรียน กรุณาระบุชื่อผู้ขับรถ'); return; }
         if(f.dateBack && f.dateBack < f.dateGo){ alert('วันที่กลับต้องไม่อยู่ก่อนวันที่เดินทางไป'); return; }
         save.disabled = true; save.textContent = 'กำลังบันทึก...';
