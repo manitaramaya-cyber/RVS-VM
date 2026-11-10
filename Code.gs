@@ -205,7 +205,7 @@ function sendLineText_(text){
 // ทดสอบส่งข้อความไปยัง LINE กลุ่มที่ตั้งค่าไว้ใน Script Properties
 // เรียกฟังก์ชันนี้จาก Apps Script Editor เพื่อทดสอบการเชื่อมต่อ
 function TestLineGroupMessage(){
-  var message='ทดสอบการเชื่อมต่อ LINE กลุ่ม RVS-VM\\nระบบสามารถส่งข้อความเข้ากลุ่มได้แล้ว\\nเวลา: '+Utilities.formatDate(new Date(),'Asia/Bangkok','dd/MM/yyyy HH:mm:ss');
+  var message='ทดสอบการเชื่อมต่อ LINE กลุ่ม RVS-VM\nระบบสามารถส่งข้อความเข้ากลุ่มได้แล้ว\nเวลา: '+Utilities.formatDate(new Date(),'Asia/Bangkok','dd/MM/yyyy HH:mm:ss');
   sendLineText_(message);
   Logger.log('ส่งข้อความทดสอบไปยัง LINE Group สำเร็จ');
   return 'ส่งข้อความทดสอบไปยัง LINE Group สำเร็จ';
