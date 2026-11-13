@@ -2722,7 +2722,8 @@ function attachRowButtons(){
 function cardToolsHtml(r){
   var st = String(r.status || '').trim();
   var canDone = (st !== 'ยกเลิก' && st !== 'ปฏิเสธ');
-  return '<div class="card-tools">' +
+  var cancelReview = r.cancelRequestStatus === 'รอพิจารณา' ? '<div style="grid-column:1/-1;background:#7f1d1d;color:#fff;border:1px solid #ef4444;border-radius:10px;padding:12px;margin-bottom:10px"><b>🔴 มีคำขอยกเลิกจากผู้ใช้</b><br>ผู้ขอ: '+esc(r.cancelName||'-')+' (รหัส '+esc(r.cancelStaffId||'-')+')<br>เหตุผล: '+esc(r.cancelReason||'-')+'<br><small>โปรดพิจารณาคำขอก่อนดำเนินการ</small><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="btn small approveCancelRequest" style="background:#dcfce7;color:#14532d">ยืนยันยกเลิกคำร้อง</button><button type="button" class="btn small rejectCancelRequest">ไม่อนุมัติคำขอยกเลิก</button></div></div>' : (r.cancelRequestStatus ? '<div style="grid-column:1/-1;color:var(--muted);font-size:12px">คำขอยกเลิก: '+esc(r.cancelRequestStatus)+' · '+esc(r.cancelReviewedBy||'')+'</div>' : '');
+  return '<div class="card-tools">' + cancelReview +
     '<button type="button" class="btn small edit editBtn">✏️ แก้ไขรายละเอียด</button>' +
     '<button type="button" class="btn small del delBtn">🗑️ ลบคำขอ</button>' +
     '<button type="button" class="btn small secondary printBtn">🖨️ พรีวิว / พิมพ์ใบอนุญาต</button>' +
@@ -2777,6 +2778,10 @@ function attachCardTools(){
     var id = card.dataset.id;
     function q(sel){ return card.querySelector(sel); }
     function findReq(){ return requests.find(function(x){ return String(x.id) === String(id); }); }
+    var approveCancel = q('.approveCancelRequest'), rejectCancel = q('.rejectCancelRequest');
+    function reviewCancel(approve, button){var r=findReq();if(!r)return;var action=approve?'อนุมัติคำขอยกเลิกและเปลี่ยนสถานะคำร้องเป็น “ยกเลิก”':'ไม่อนุมัติคำขอยกเลิก';if(!confirm('ยืนยัน'+action+'ใช่หรือไม่?\\n'+(r.cancelName||r.name)+' → '+(r.destination||'-')))return;button.disabled=true;google.script.run.withSuccessHandler(function(){loadRequests();}).withFailureHandler(function(err){button.disabled=false;alert('ดำเนินการคำขอยกเลิกไม่สำเร็จ: '+(err&&err.message?err.message:err));}).resolveCancelRequest(id,approve,currentAdminToken());}
+    if(approveCancel)approveCancel.addEventListener('click',function(){reviewCancel(true,approveCancel)});
+    if(rejectCancel)rejectCancel.addEventListener('click',function(){reviewCancel(false,rejectCancel)});
     var panel = q('.edit-panel'), editBtn = q('.editBtn');
     var needSel = q('.ed-needDriver'), reqBox = q('.ed-reqDriverBox');
     function syncNeed(){ if(needSel && reqBox){ reqBox.style.display = needSel.value === '1' ? 'none' : ''; } }
