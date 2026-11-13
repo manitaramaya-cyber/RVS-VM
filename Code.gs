@@ -842,6 +842,33 @@ function deleteRequest(id,adminToken){
   try{var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบรายการคำขอ: '+id);appendAuditLog_('DELETE',id,admin||'',found.object['สถานะ']||'','ลบรายการ',found.object['รถที่จัด']||'',{type:'DELETE',deletedRequest:found.object});found.sheet.deleteRow(found.row);return true;}
   finally{lock.releaseLock();}
 }
+function deleteRequests(ids,adminToken){
+  var actingAdmin=requireAdminSession_(adminToken),admin=actingAdmin.account;
+  if(!Array.isArray(ids)||!ids.length)throw new Error('กรุณาเลือกรายการที่ต้องการลบ');
+  if(ids.length>200)throw new Error('ลบได้ไม่เกิน 200 รายการต่อครั้ง');
+  var unique=[],seen={};
+  ids.forEach(function(value){var id=String(value==null?'':value).trim();if(id&&!seen[id]){seen[id]=true;unique.push(id);}});
+  if(!unique.length)throw new Error('ไม่พบรหัสรายการที่ถูกต้อง');
+  var lock=LockService.getScriptLock();lock.waitLock(15000);
+  try{
+    var sh=sheet_(SHEETS.REQUESTS),values=sh.getDataRange().getValues();
+    if(!values.length)throw new Error('ไม่พบข้อมูลคำขอ');
+    var headers=values[0],idCol=headers.indexOf('id');
+    if(idCol<0)throw new Error('ไม่พบคอลัมน์ id ในชีต Requests');
+    var rowById={};
+    for(var i=1;i<values.length;i++){var key=String(values[i][idCol]||'');if(key&&seen[key]){var obj={};headers.forEach(function(h,j){obj[h]=values[i][j];});rowById[key]={row:i+1,object:obj};}}
+    var missing=unique.filter(function(id){return !rowById[id];});
+    if(missing.length)throw new Error('ไม่พบรายการต่อไปนี้ (ไม่มีการลบรายการใด): '+missing.join(', '));
+    var ordered=unique.map(function(id){return {id:id,row:rowById[id].row,object:rowById[id].object};}).sort(function(a,b){return b.row-a.row;});
+    var deleted=[];
+    ordered.forEach(function(item){
+      appendAuditLog_('DELETE',item.id,admin||'',item.object['สถานะ']||'','ลบรายการ',item.object['รถที่จัด']||'',{type:'BULK_DELETE',deletedRequest:item.object,batchSize:unique.length});
+      sh.deleteRow(item.row);
+      deleted.push(item.id);
+    });
+    return {ok:true,deleted:deleted.length,deletedIds:deleted,failed:[]};
+  }finally{lock.releaseLock();}
+}
 function getAuditLogs(adminToken){requireAdminSession_(adminToken);var sh=getAuditSheet_(),values=sh.getDataRange().getValues();if(values.length<2)return [];var headers=values[0],out=[];for(var i=values.length-1;i>=1;i--){var row=values[i],o={};headers.forEach(function(h,j){o[h]=row[j];});out.push({logId:o.logId||'',timestamp:o.timestamp instanceof Date?o.timestamp.toISOString():String(o.timestamp||''),action:o.action||'',requestId:o.requestId||'',admin:o.admin||'',oldStatus:o.oldStatus||'',newStatus:o.newStatus||'',vehicles:o.vehicles||'',detail:o.detail||''});}return out;}
 
 var CONFLICT_ACK_SHEET='ConflictAcknowledgements';
