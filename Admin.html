@@ -886,6 +886,16 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
 @media print{.no-print{display:none!important}}
 .vd-add-box{margin:12px 0;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
 .vd-restricted{display:block;margin-top:4px;color:#D9A45A;font-size:11px}
+
+.bulk-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.bulk-toolbar .bulk-select-all{display:inline-flex;align-items:center;gap:7px;margin:0;font-weight:600;cursor:pointer}
+.bulk-toolbar input{width:auto;margin:0}
+.bulk-toolbar #bulkSelectedCount{color:var(--dim);font-size:13px;margin-right:auto}
+.bulk-toolbar button:disabled{opacity:.45;cursor:not-allowed}
+.request-select{display:flex;align-items:flex-start;padding:3px 8px 0 0}
+.request-select input{width:18px;height:18px;margin:0;cursor:pointer;accent-color:var(--amber)}
+.request-top{gap:8px}
+@media(max-width:520px){.bulk-toolbar{gap:8px}.bulk-toolbar #bulkSelectedCount{margin-right:0}.bulk-toolbar button{width:100%}}
 </style>
 </head>
 <body>
@@ -1198,6 +1208,11 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
         </button>
       </div>
       <div id="listMsg" class="msg err"></div>
+      <div class="bulk-toolbar" id="bulkToolbar">
+        <label class="bulk-select-all"><input type="checkbox" id="bulkSelectAll"> เลือกทั้งหมด</label>
+        <span id="bulkSelectedCount" aria-live="polite">เลือก 0 รายการ</span>
+        <button type="button" class="btn del small" id="bulkDeleteBtn" disabled>🗑 ลบรายการที่เลือก</button>
+      </div>
       <div id="requestList" class="request-list">
         <div class="loading">
           กำลังโหลดรายการคำขอ...
@@ -2203,6 +2218,7 @@ function renderRequests(){
         ? 'ไม่มีคำขอค้างในแท็บจัดรถ (รายการที่ดำเนินการแล้วเสร็จดูได้ในแท็บ Log)'
         : 'ไม่พบรายการคำขอ') +
       '</div>';
+    updateBulkSelectionUI();
     return;
   }
   /* เรียงจากวันที่ปัจจุบัน: วันนี้/อนาคต ใกล้สุดก่อน แล้วต่อด้วยรายการที่ผ่านมาแล้วย้อนไปจนถึงวันที่ไกลที่สุด */
@@ -2293,6 +2309,7 @@ function renderRequests(){
         esc(r.id) +
         '">' +
           '<div class="request-top">' +
+            '<label class="request-select" title="เลือกรายการนี้เพื่อลบ"><input type="checkbox" class="request-select-checkbox" value="' + esc(r.id) + '" aria-label="เลือกรายการของ ' + esc(r.name || '') + '"></label>' +
             '<div class="request-main">' +
               '<div class="request-date">' +
                 esc(r.dateGo || '-') +
@@ -2376,6 +2393,7 @@ function renderRequests(){
   attachDriverSelects();
   attachConflictAcknowledgementButtons();
   attachCardTools();
+  updateBulkSelectionUI();
 }
 
 /* ===== พนักงานขับรถ: ตรวจเวลาซ้อน + ป๊อปอัปเตือน ===== */
@@ -2765,7 +2783,7 @@ function attachCardTools(){
             save.disabled = false; save.textContent = '💾 บันทึกการแก้ไข';
             alert('บันทึกการแก้ไขไม่สำเร็จ: ' + (err && err.message ? err.message : err));
           })
-          .updateRequestDetails(id, f, currentAdminToken());
+          .updateRequestDetails(id, Object.assign({}, f, {timeGo:timeDotToColon(f.timeGo), timeBack:timeDotToColon(f.timeBack)}), currentAdminToken());
       });
     }
     var prev = q('.edPreview');
@@ -3151,6 +3169,36 @@ function dashboardRejectRequest(id){
   var reason=prompt('ระบุเหตุผลที่ปฏิเสธคำขอ (เช่น รถชนกัน / คำขอไม่เหมาะสม):','');if(reason===null)return;
   reason=String(reason).trim();if(!reason){alert('กรุณาระบุเหตุผลก่อนปฏิเสธคำขอ');return;}
   google.script.run.withSuccessHandler(function(){loadRequests(function(){renderDashboard();});}).withFailureHandler(function(err){alert('ปฏิเสธคำขอไม่สำเร็จ: '+(err&&err.message?err.message:err));}).updateRequestStatusWithAudit(id,'ปฏิเสธ',r.vehicles||'',document.getElementById('recordedBy').value||'SAdmin',reason,currentAdminToken());
+}
+function getSelectedRequestIds(){
+  return Array.prototype.map.call(document.querySelectorAll('.request-select-checkbox:checked'),function(el){return String(el.value||'').trim();}).filter(Boolean);
+}
+function updateBulkSelectionUI(){
+  var boxes=Array.prototype.slice.call(document.querySelectorAll('.request-select-checkbox'));
+  var selected=boxes.filter(function(el){return el.checked;}).length;
+  var count=document.getElementById('bulkSelectedCount'),btn=document.getElementById('bulkDeleteBtn'),all=document.getElementById('bulkSelectAll');
+  if(count)count.textContent='เลือก '+selected+' รายการ';
+  if(btn){btn.disabled=selected===0;btn.textContent=selected?'🗑 ลบรายการที่เลือก ('+selected+')':'🗑 ลบรายการที่เลือก';}
+  if(all){all.checked=boxes.length>0&&selected===boxes.length;all.indeterminate=selected>0&&selected<boxes.length;}
+}
+function bindBulkDeleteControls(){
+  var all=document.getElementById('bulkSelectAll'),btn=document.getElementById('bulkDeleteBtn'),list=document.getElementById('requestList');
+  if(all&&all.dataset.bound!=='1'){all.dataset.bound='1';all.addEventListener('change',function(){document.querySelectorAll('.request-select-checkbox').forEach(function(el){el.checked=all.checked;});updateBulkSelectionUI();});}
+  if(list&&list.dataset.bulkBound!=='1'){list.dataset.bulkBound='1';list.addEventListener('change',function(e){if(e.target&&e.target.classList.contains('request-select-checkbox'))updateBulkSelectionUI();});}
+  if(btn&&btn.dataset.bound!=='1'){btn.dataset.bound='1';btn.addEventListener('click',function(){
+    var ids=getSelectedRequestIds();if(!ids.length)return;
+    if(!confirm('ท่านต้องการลบจำนวนทั้งหมด '+ids.length+' รายการ ใช่หรือไม่?\\n\\nระบบจะบันทึกประวัติการลบแต่ละรายการไว้ใน Log'))return;
+    btn.disabled=true;btn.textContent='กำลังลบ '+ids.length+' รายการ...';
+    google.script.run.withSuccessHandler(function(res){
+      var deleted=Number(res&&res.deleted)||0,failed=Array.isArray(res&&res.failed)?res.failed:[];
+      alert('ลบสำเร็จ '+deleted+' รายการ'+(failed.length?'\\nไม่สำเร็จ '+failed.length+' รายการ: '+failed.map(function(x){return x.id+': '+x.reason;}).join(' | '):''));
+      loadRequests(function(){renderDashboard();});
+    }).withFailureHandler(function(err){
+      btn.disabled=false;btn.textContent='🗑 ลบรายการที่เลือก';
+      alert('ลบหลายรายการไม่สำเร็จ: '+(err&&err.message?err.message:err));
+    }).deleteRequests(ids,currentAdminToken());
+  });}
+  updateBulkSelectionUI();
 }
 function dashboardDeleteRequest(id){
   var r=requests.find(function(x){return String(x.id)===String(id);});if(!r)return;
@@ -4136,5 +4184,6 @@ function mtRenderHistory(){
   box.querySelectorAll('[data-mt-hdis]').forEach(function(b){b.addEventListener('click',function(){mtResolve(b.getAttribute('data-mt-hdis'),'DISMISS',b)})});
 }
 </script>
+<script>document.addEventListener("DOMContentLoaded", bindBulkDeleteControls);</script>
 </body>
 </html>
