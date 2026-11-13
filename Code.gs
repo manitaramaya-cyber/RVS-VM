@@ -876,10 +876,15 @@ function resolveCancelRequest(id,approve,adminToken){
     var requestSheet=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(requestSheet);
     var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบคำร้องใช้รถ');var r=found.object;
     if(String(r['สถานะคำขอยกเลิก']||'')!=='รอพิจารณา')throw new Error('ไม่มีคำขอยกเลิกที่รอพิจารณา');
-    var oldStatus=String(r['สถานะ']||STATUS.PENDING),newStatus=approve?STATUS.CANCELLED:oldStatus,decision=approve?'ดำเนินการแล้ว':'ไม่อนุมัติ';
-    var sh=found.sheet,headers=found.headers;function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
-    if(approve)set('สถานะ',STATUS.CANCELLED);set('สถานะคำขอยกเลิก',decision);set('ผู้พิจารณาคำขอยกเลิก',admin.account);set('วันที่พิจารณาคำขอยกเลิก',new Date());
-    appendAuditLog_(approve?'CANCEL_REQUEST_APPROVED':'CANCEL_REQUEST_DECLINED',id,admin.account,oldStatus,newStatus,String(r['รถที่จัด']||''),{type:'CANCEL_REQUEST_REVIEWED',approved:!!approve,requester:r['ชื่อผู้ขอยกเลิก']||'',staffId:r['รหัสผู้ขอยกเลิก']||'',reason:r['เหตุผลการขอยกเลิก']||''});return {ok:true,status:newStatus};
+    var oldStatus=String(r['สถานะ']||STATUS.PENDING),sh=found.sheet,headers=found.headers;
+    function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
+    if(approve){
+      appendAuditLog_('CANCEL_REQUEST_APPROVED_DELETE',id,admin.account,oldStatus,'ลบคำร้อง',String(r['รถที่จัด']||''),{type:'CANCEL_REQUEST_APPROVED_AND_DELETED',deletedRequest:r,requester:r['ชื่อผู้ขอยกเลิก']||'',staffId:r['รหัสผู้ขอยกเลิก']||'',reason:r['เหตุผลการขอยกเลิก']||''});
+      sh.deleteRow(found.row);
+      return {ok:true,status:'ลบคำร้องแล้ว'};
+    }
+    set('สถานะคำขอยกเลิก','ไม่อนุมัติ');set('ผู้พิจารณาคำขอยกเลิก',admin.account);set('วันที่พิจารณาคำขอยกเลิก',new Date());
+    appendAuditLog_('CANCEL_REQUEST_DECLINED',id,admin.account,oldStatus,oldStatus,String(r['รถที่จัด']||''),{type:'CANCEL_REQUEST_DECLINED',requester:r['ชื่อผู้ขอยกเลิก']||'',staffId:r['รหัสผู้ขอยกเลิก']||'',reason:r['เหตุผลการขอยกเลิก']||''});return {ok:true,status:oldStatus};
   }finally{lock.releaseLock();}
 }
 
