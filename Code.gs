@@ -733,7 +733,7 @@ function getAllRequests(adminToken){requireAdminSession_(adminToken);return rows
 
 
 function normalizeDuplicateText_(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ');}
-function normalizeCompanionList_(v){return String(v==null?'':v).split(/[\\n,;]+/).map(function(x){return normalizeDuplicateText_(x);}).filter(Boolean).sort().join('|');}
+function normalizeCompanionList_(v){return String(v==null?'':v).split(/[\n,;]+/).map(function(x){return normalizeDuplicateText_(x);}).filter(Boolean).sort().join('|');}
 function findDuplicateBooking_(payload){
   var rows=rowsToObjects_(sheet_(SHEETS.REQUESTS)),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
   var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
