@@ -726,7 +726,7 @@ function getBookingsForMonth(year,month){
     vehicles:String(r['รถที่จัด']||''),
     driver:String(r[DRIVER_COL_]||''),
     requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),
-    note:String(r['หมายเหตุ']||''),id:String(r.id||''),staffId:String(r['รหัสบุคลากร']||''),cancelRequestStatus:String(r['สถานะคำขอยกเลิก']||''),cancelStaffId:String(r['รหัสผู้ขอยกเลิก']||''),cancelName:String(r['ชื่อผู้ขอยกเลิก']||''),cancelReason:String(r['เหตุผลการขอยกเลิก']||'')
+    note:String(r['หมายเหตุ']||''),id:String(r.id||''),cancelRequestStatus:String(r['สถานะคำขอยกเลิก']||''),cancelStaffId:String(r['รหัสผู้ขอยกเลิก']||''),cancelName:String(r['ชื่อผู้ขอยกเลิก']||''),cancelReason:String(r['เหตุผลการขอยกเลิก']||'')
   };});
 }
 function getAllRequests(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).sort(function(a,b){return a.dateGo<b.dateGo?1:a.dateGo>b.dateGo?-1:0;});}
