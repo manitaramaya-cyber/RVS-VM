@@ -949,9 +949,14 @@ function requestCancelBooking(payload){
     // รายการเก่าหรือรายการที่ Admin บันทึกอาจไม่มีรหัสบุคลากร:
     // ถ้ามีรหัสเดิม ต้องตรงกัน; ถ้าไม่มี ให้ยืนยันด้วยทะเบียนบุคลากรแทน
     if(storedStaffId&&storedStaffId!==staffId)throw new Error('รหัสประจำตัวครูไม่ตรงกับรายการจอง กรุณาตรวจสอบรหัสอีกครั้ง');
-    var staff=lookupStaffByIdWithoutAuth_(staffId);
-    if(!storedStaffId&&!staff)throw new Error('รายการจองนี้ไม่มีรหัสบุคลากรเดิม กรุณาใช้รหัสที่มีอยู่ในทะเบียนบุคลากรของโรงเรียน');
-    if(staff&&normalizeDuplicateText_(staff.name)!==submittedName)throw new Error('ชื่อไม่ตรงกับทะเบียนบุคลากร กรุณากรอกชื่อ-นามสกุลตามทะเบียนบุคลากร');
+    // หากรายการเดิมมีรหัสบุคลากรและรหัสตรงกัน ให้ใช้ชื่อจากรายการจองเป็นหลัก
+    // ไม่ตรวจชื่อซ้ำกับ Staff เพราะทะเบียนอาจใช้รูปแบบชื่อ/คำนำหน้าต่างจากวันที่จอง
+    // เฉพาะรายการเก่าที่ไม่มีรหัสเดิม จึงต้องยืนยันตัวตนกับทะเบียน Staff ทั้งรหัสและชื่อ
+    if(!storedStaffId){
+      var staff=lookupStaffByIdWithoutAuth_(staffId);
+      if(!staff)throw new Error('รายการจองนี้ไม่มีรหัสบุคลากรเดิม และไม่พบรหัสนี้ในทะเบียนบุคลากรของโรงเรียน');
+      if(normalizeDuplicateText_(staff.name)!==submittedName)throw new Error('ชื่อไม่ตรงกับทะเบียนบุคลากร กรุณากรอกชื่อ-นามสกุลตามทะเบียนบุคลากร');
+    }
     var status=String(r['สถานะ']||STATUS.PENDING);if([STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE].indexOf(status)>=0)throw new Error('คำร้องนี้สิ้นสุดแล้ว ไม่สามารถขอยกเลิกซ้ำได้');
     if(String(r['สถานะคำขอยกเลิก']||'')==='รอพิจารณา')throw new Error('คำร้องนี้มีคำขอยกเลิกอยู่ระหว่างรอแอดมินพิจารณาแล้ว');
     var sh=found.sheet,headers=found.headers;function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
