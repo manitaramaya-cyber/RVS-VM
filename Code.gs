@@ -1,6 +1,6 @@
 var ADMIN_KEY='rav-fleet-x9k2m7'; // ใช้เลือกหน้าเว็บเท่านั้น ไม่ใช่การยืนยันสิทธิ์ Admin
 var SHEETS={STAFF:'Staff',REQUESTS:'Requests',VEHICLES:'Vehicles',DRIVERS:'Drivers'};
-var APP_VERSION='V1.3.0'; // Bulk Delete + HH.MM time input
+var APP_VERSION='V1.3.0'; // Bulk Delete + Bulk Complete + HH.MM time input
 var REQ_DRIVER_NAME_COL_='ชื่อผู้ขับรถที่ผู้ขอระบุ'; // V1.2.9: ชื่อผู้ขับรถที่ผู้ขอใช้รถระบุเอง (แยกจาก DRIVER_COL_ ที่ Admin จัดสรร ห้ามเขียนทับกัน)
 var REQ_PHONE_COL_='เบอร์โทรผู้ขอใช้รถ'; // V1.2.9: เบอร์ติดต่อผู้ขอใช้รถ (เฉพาะ Admin เห็น ไม่ส่งออกใน getBookingsForMonth)
 var DRIVER_COL_='คนขับที่จัด'; // คอลัมน์ในชีต Requests (ถ้ายังไม่มี ระบบจะสร้างให้อัตโนมัติเมื่อบันทึกคนขับครั้งแรก)
@@ -968,3 +968,36 @@ function completeRequest(id,adminToken){
     return {ok:true};
   }finally{lock.releaseLock();}
 }
+function completeRequests(ids,adminToken){
+  var actingAdmin=requireAdminSession_(adminToken),admin=actingAdmin.account;
+  if(!Array.isArray(ids)||!ids.length)throw new Error('กรุณาเลือกรายการที่ต้องการดำเนินการ');
+  if(ids.length>200)throw new Error('ดำเนินการได้ไม่เกิน 200 รายการต่อครั้ง');
+  var unique=[],seen={};
+  ids.forEach(function(value){var id=String(value==null?'':value).trim();if(id&&!seen[id]){seen[id]=true;unique.push(id);}});
+  if(!unique.length)throw new Error('ไม่พบรหัสรายการที่ถูกต้อง');
+  var lock=LockService.getScriptLock();lock.waitLock(15000);
+  try{
+    var sh=sheet_(SHEETS.REQUESTS),values=sh.getDataRange().getValues();
+    if(!values.length)throw new Error('ไม่พบข้อมูลคำขอ');
+    var headers=values[0],idCol=headers.indexOf('id'),statusCol=headers.indexOf('สถานะ');
+    if(idCol<0)throw new Error('ไม่พบคอลัมน์ id ในชีต Requests');
+    if(statusCol<0)throw new Error('ไม่พบคอลัมน์ สถานะ ในชีต Requests');
+    var rowById={};
+    for(var i=1;i<values.length;i++){
+      var key=String(values[i][idCol]||'');
+      if(key&&seen[key]){var obj={};headers.forEach(function(h,j){obj[h]=values[i][j];});rowById[key]={row:i+1,object:obj};}
+    }
+    var missing=unique.filter(function(id){return !rowById[id];});
+    if(missing.length)throw new Error('ไม่พบรายการต่อไปนี้ (ไม่มีการเปลี่ยนสถานะรายการใด): '+missing.join(', '));
+    var completed=[],skipped=[];
+    unique.forEach(function(id){
+      var item=rowById[id],oldStatus=String(item.object['สถานะ']||'');
+      if(oldStatus===STATUS.CANCELLED||oldStatus===STATUS.REJECTED){skipped.push({id:id,reason:oldStatus});return;}
+      sh.getRange(item.row,statusCol+1).setValue(STATUS.DONE);
+      appendAuditLog_('COMPLETE',id,admin,oldStatus,STATUS.DONE,item.object['รถที่จัด']||'',{type:'BULK_COMPLETE',before:item.object,after:Object.assign({},item.object,{'สถานะ':STATUS.DONE}),batchSize:unique.length});
+      completed.push(id);
+    });
+    return {ok:true,completed:completed.length,completedIds:completed,skipped:skipped};
+  }finally{lock.releaseLock();}
+}
+
