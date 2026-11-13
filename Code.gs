@@ -741,7 +741,8 @@ function getAllRequests(adminToken){requireAdminSession_(adminToken);ensureReque
 function normalizeDuplicateText_(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ');}
 function normalizeCompanionList_(v){return String(v==null?'':v).split(/[\n,;]+/).map(function(x){return normalizeDuplicateText_(x);}).filter(Boolean).sort().join('|');}
 function findDuplicateBooking_(payload){
-  var rows=rowsToObjects_(sheet_(SHEETS.REQUESTS)),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
+  var requestSheet=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(requestSheet);
+  var rows=rowsToObjects_(requestSheet),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
   var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
   for(var i=0;i<rows.length;i++){
     var r=rows[i],st=String(r['สถานะ']||STATUS.PENDING);if(excluded.indexOf(st)>=0)continue;
@@ -927,7 +928,7 @@ function deleteRequests(ids,adminToken){
   if(!unique.length)throw new Error('ไม่พบรหัสรายการที่ถูกต้อง');
   var lock=LockService.getScriptLock();lock.waitLock(15000);
   try{
-    var sh=sheet_(SHEETS.REQUESTS),values=sh.getDataRange().getValues();
+    var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);var values=sh.getDataRange().getValues();
     if(!values.length)throw new Error('ไม่พบข้อมูลคำขอ');
     var headers=values[0],idCol=headers.indexOf('id');
     if(idCol<0)throw new Error('ไม่พบคอลัมน์ id ในชีต Requests');
