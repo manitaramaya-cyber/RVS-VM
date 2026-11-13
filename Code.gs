@@ -764,16 +764,22 @@ function findDuplicateBooking_(payload){
   var requestSheet=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(requestSheet);
   var rows=rowsToObjects_(requestSheet),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
   var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
+  var newStaffId=normalizeStaffId_(payload.staffId),newName=normalizeDuplicateText_(payload.name);
   for(var i=0;i<rows.length;i++){
     var r=rows[i],st=String(r['สถานะ']||STATUS.PENDING);if(excluded.indexOf(st)>=0)continue;
-    if(normalizeStaffId_(r['รหัสบุคลากร'])!==normalizeStaffId_(payload.staffId)||!same(r['ชื่อ-นามสกุล'],payload.name)||!same(r['ปลายทาง'],payload.destination))continue;
+    var oldStaffId=normalizeStaffId_(r['รหัสบุคลากร']),oldName=normalizeDuplicateText_(r['ชื่อ-นามสกุล']);
+    // ถ้ามีรหัสทั้งสองฝั่ง ต้องตรงกัน; หากข้อมูลเก่า/Admin ไม่มีรหัส ใช้ชื่อผู้ขอเป็น fallback
+    if(oldStaffId&&newStaffId){if(oldStaffId!==newStaffId)continue;}
+    else if(!oldName||oldName!==newName)continue;
+    if(!oldName||oldName!==newName||!same(r['ปลายทาง'],payload.destination))continue;
     if(!sameDateValue_(r['วันที่ไป'],payload.dateGo)||normalizeTimeValue_(r['เวลาไป'])!==normalizeTimeValue_(payload.timeGo))continue;
     if(!sameDateValue_(r['วันที่กลับ'],payload.dateBack)||normalizeTimeValue_(r['เวลากลับ'])!==normalizeTimeValue_(payload.timeBack))continue;
     if(normalizeCompanionList_(r['รายชื่อผู้ร่วมเดินทาง'])!==normalizeCompanionList_(payload.companionNames))continue;
     if((Number(r['จำนวนผู้ร่วมเดินทาง'])||0)!==(Number(payload.companionCount)||0)||(Number(r['จำนวนนักเรียน'])||0)!==(Number(payload.students)||0)||(Number(r['จำนวนครู'])||0)!==(Number(payload.teachers)||0)||(Number(r['จำนวนอื่นๆ'])||0)!==(Number(payload.others)||0))continue;
     var oldNeed=String(r['ต้องการคนขับ']||'').trim()==='ต้องการ',newNeed=(payload.needDriver===true||payload.needDriver==='1'||payload.needDriver==='ต้องการ');
-    if(oldNeed!==newNeed)continue;if(!newNeed&&!same(r[REQ_DRIVER_NAME_COL_],payload.requestedDriver))continue;
-    return {id:String(r.id||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ'])};
+    if(oldNeed!==newNeed)continue;
+    if(!newNeed&&!same(r[REQ_DRIVER_NAME_COL_],payload.requestedDriver))continue;
+    return {id:String(r.id||''),requestId:String(r.id||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ'])};
   }return null;
 }
 function checkDuplicateBooking(payload){payload=payload||{};var match=findDuplicateBooking_(payload);return {duplicate:!!match,match:match};}
@@ -933,7 +939,8 @@ function saveRequestWithAudit(payload,adminToken){
 }
 
 function requestCancelBooking(payload){
-  payload=payload||{};var id=String(payload.id||'').trim(),staffId=normalizeStaffId_(payload.staffId),name=String(payload.name||'').trim(),reason=String(payload.reason||'').trim();
+  payload=payload||{};
+  var id=String(payload.id||'').trim(),staffId=normalizeStaffId_(payload.staffId),name=String(payload.name||'').trim(),reason=String(payload.reason||'').trim();
   if(!id||!staffId||!name||!reason)throw new Error('กรุณากรอกรหัสประจำตัวครู ชื่อผู้ขอยกเลิก และสาเหตุให้ครบถ้วน');
   if(reason.length>1000)throw new Error('สาเหตุการยกเลิกยาวเกิน 1,000 ตัวอักษร');
   var lock=LockService.getScriptLock();lock.waitLock(10000);
@@ -944,24 +951,21 @@ function requestCancelBooking(payload){
     var storedStaffId=normalizeStaffId_(r['รหัสบุคลากร']);
     var storedName=normalizeDuplicateText_(r['ชื่อ-นามสกุล']);
     var submittedName=normalizeDuplicateText_(name);
-    // ชื่อต้องตรงกับผู้ขอในรายการเดิมเสมอ
-    if(storedName!==submittedName)throw new Error('ชื่อผู้ขอยกเลิกไม่ตรงกับชื่อผู้ขอใช้รถในรายการ กรุณากรอกชื่อให้ตรงกับรายการจอง');
-    // รายการเก่าหรือรายการที่ Admin บันทึกอาจไม่มีรหัสบุคลากร:
-    // ถ้ามีรหัสเดิม ต้องตรงกัน; ถ้าไม่มี ให้ยืนยันด้วยทะเบียนบุคลากรแทน
+    var staff=lookupStaffByIdWithoutAuth_(staffId);
+    if(!staff)throw new Error('ไม่พบรหัสประจำตัวครูในทะเบียนบุคลากร กรุณาตรวจสอบรหัสอีกครั้ง');
     if(storedStaffId&&storedStaffId!==staffId)throw new Error('รหัสประจำตัวครูไม่ตรงกับรายการจอง กรุณาตรวจสอบรหัสอีกครั้ง');
-    // หากรายการเดิมมีรหัสบุคลากรและรหัสตรงกัน ให้ใช้ชื่อจากรายการจองเป็นหลัก
-    // ไม่ตรวจชื่อซ้ำกับ Staff เพราะทะเบียนอาจใช้รูปแบบชื่อ/คำนำหน้าต่างจากวันที่จอง
-    // เฉพาะรายการเก่าที่ไม่มีรหัสเดิม จึงต้องยืนยันตัวตนกับทะเบียน Staff ทั้งรหัสและชื่อ
-    if(!storedStaffId){
-      var staff=lookupStaffByIdWithoutAuth_(staffId);
-      if(!staff)throw new Error('รายการจองนี้ไม่มีรหัสบุคลากรเดิม และไม่พบรหัสนี้ในทะเบียนบุคลากรของโรงเรียน');
-      if(normalizeDuplicateText_(staff.name)!==submittedName)throw new Error('ชื่อไม่ตรงกับทะเบียนบุคลากร กรุณากรอกชื่อ-นามสกุลตามทะเบียนบุคลากร');
-    }
-    var status=String(r['สถานะ']||STATUS.PENDING);if([STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE].indexOf(status)>=0)throw new Error('คำร้องนี้สิ้นสุดแล้ว ไม่สามารถขอยกเลิกซ้ำได้');
+    // ยอมรับชื่อที่ตรงกับข้อมูล ณ วันที่จอง หรือชื่อปัจจุบันในทะเบียน เมื่อยืนยันรหัสบุคลากรได้แล้ว
+    var nameMatchesBooking=!!storedName&&storedName===submittedName;
+    var nameMatchesStaff=!!normalizeDuplicateText_(staff.name)&&normalizeDuplicateText_(staff.name)===submittedName;
+    if(!nameMatchesBooking&&!nameMatchesStaff)throw new Error('ชื่อไม่ตรงกับรายการจองหรือทะเบียนบุคลากร กรุณาตรวจสอบชื่อ-นามสกุล');
+    var status=String(r['สถานะ']||STATUS.PENDING);
+    if([STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE].indexOf(status)>=0)throw new Error('คำร้องนี้สิ้นสุดแล้ว ไม่สามารถขอยกเลิกซ้ำได้');
     if(String(r['สถานะคำขอยกเลิก']||'')==='รอพิจารณา')throw new Error('คำร้องนี้มีคำขอยกเลิกอยู่ระหว่างรอแอดมินพิจารณาแล้ว');
-    var sh=found.sheet,headers=found.headers;function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
+    var sh=found.sheet,headers=found.headers;
+    function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
     set('สถานะคำขอยกเลิก','รอพิจารณา');set('รหัสผู้ขอยกเลิก',staffId);set('ชื่อผู้ขอยกเลิก',name);set('เหตุผลการขอยกเลิก',reason);set('วันที่ขอยกเลิก',new Date());
-    appendAuditLog_('CANCEL_REQUEST_SUBMITTED',id,name,status,status,String(r['รถที่จัด']||''),{type:'CANCEL_REQUEST_SUBMITTED',staffId:staffId,name:name,reason:reason});return {ok:true};
+    appendAuditLog_('CANCEL_REQUEST_SUBMITTED',id,name,status,status,String(r['รถที่จัด']||''),{type:'CANCEL_REQUEST_SUBMITTED',staffId:staffId,name:name,reason:reason});
+    return {ok:true,requestId:id};
   }finally{lock.releaseLock();}
 }
 function resolveCancelRequest(id,approve,adminToken){
