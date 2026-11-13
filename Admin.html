@@ -2357,6 +2357,7 @@ function renderRequests(){
                 '📍 ' +
                 esc(r.destination || '-') +
               '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:4px;min-width:0;overflow-wrap:anywhere;word-break:break-word">RequestID: ' + esc(r.id || 'ไม่พบรหัสคำขอ') + '</div>' +
             '</div>' +
             '<div>' +
               statusBadge(displayStatus) +
