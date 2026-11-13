@@ -1212,6 +1212,7 @@ body.light{--bg:#fff;--panel:#fff;--panel2:#f4f6f7;--panel3:#e9eef0;--ink:#11182
         <label class="bulk-select-all"><input type="checkbox" id="bulkSelectAll"> เลือกทั้งหมด</label>
         <span id="bulkSelectedCount" aria-live="polite">เลือก 0 รายการ</span>
         <button type="button" class="btn del small" id="bulkDeleteBtn" disabled>🗑 ลบรายการที่เลือก</button>
+        <button type="button" class="btn done small" id="bulkCompleteBtn" disabled>✔ ดำเนินการแล้วเสร็จทั้งหมด</button>
       </div>
       <div id="requestList" class="request-list">
         <div class="loading">
@@ -2309,7 +2310,7 @@ function renderRequests(){
         esc(r.id) +
         '">' +
           '<div class="request-top">' +
-            '<label class="request-select" title="เลือกรายการนี้เพื่อลบ"><input type="checkbox" class="request-select-checkbox" value="' + esc(r.id) + '" aria-label="เลือกรายการของ ' + esc(r.name || '') + '"></label>' +
+            '<label class="request-select" title="เลือกรายการนี้เพื่อดำเนินการ"><input type="checkbox" class="request-select-checkbox" value="' + esc(r.id) + '" aria-label="เลือกรายการของ ' + esc(r.name || '') + '"></label>' +
             '<div class="request-main">' +
               '<div class="request-date">' +
                 esc(r.dateGo || '-') +
@@ -3176,9 +3177,10 @@ function getSelectedRequestIds(){
 function updateBulkSelectionUI(){
   var boxes=Array.prototype.slice.call(document.querySelectorAll('.request-select-checkbox'));
   var selected=boxes.filter(function(el){return el.checked;}).length;
-  var count=document.getElementById('bulkSelectedCount'),btn=document.getElementById('bulkDeleteBtn'),all=document.getElementById('bulkSelectAll');
+  var count=document.getElementById('bulkSelectedCount'),btn=document.getElementById('bulkDeleteBtn'),doneBtn=document.getElementById('bulkCompleteBtn'),all=document.getElementById('bulkSelectAll');
   if(count)count.textContent='เลือก '+selected+' รายการ';
   if(btn){btn.disabled=selected===0;btn.textContent=selected?'🗑 ลบรายการที่เลือก ('+selected+')':'🗑 ลบรายการที่เลือก';}
+  if(doneBtn){doneBtn.disabled=selected===0;doneBtn.textContent=selected?'✔ ดำเนินการแล้วเสร็จทั้งหมด ('+selected+')':'✔ ดำเนินการแล้วเสร็จทั้งหมด';}
   if(all){all.checked=boxes.length>0&&selected===boxes.length;all.indeterminate=selected>0&&selected<boxes.length;}
 }
 function bindBulkDeleteControls(){
@@ -3207,6 +3209,21 @@ function bindBulkDeleteControls(){
       loadRequests(function(){renderDashboard();});
       alert('ลบหลายรายการไม่สำเร็จ: '+(err&&err.message?err.message:err)+'\\nระบบจะโหลดรายการล่าสุดอีกครั้งเพื่อป้องกันข้อมูลบนหน้าจอคลาดเคลื่อน');
     }).deleteRequests(ids,currentAdminToken());
+  });}
+  var doneBtn=document.getElementById('bulkCompleteBtn');
+  if(doneBtn&&doneBtn.dataset.bound!=='1'){doneBtn.dataset.bound='1';doneBtn.addEventListener('click',function(){
+    var ids=getSelectedRequestIds();if(!ids.length)return;
+    if(!confirm('ยืนยันดำเนินการแล้วเสร็จทั้งหมด '+ids.length+' รายการ?\\n\\nรายการที่ดำเนินการสำเร็จจะหายจากหน้าจัดรถ และเก็บประวัติไว้ใน Log\\nรายการที่ยกเลิกหรือปฏิเสธจะไม่ถูกเปลี่ยนสถานะ'))return;
+    doneBtn.disabled=true;doneBtn.textContent='กำลังดำเนินการ '+ids.length+' รายการ...';
+    google.script.run.withSuccessHandler(function(res){
+      var completed=Number(res&&res.completed)||0,skipped=Array.isArray(res&&res.skipped)?res.skipped:[];
+      alert('ดำเนินการแล้วเสร็จสำเร็จ '+completed+' รายการ'+(skipped.length?'\\nข้าม '+skipped.length+' รายการ: '+skipped.map(function(x){return x.id+' ('+x.reason+')';}).join(' | '):''));
+      loadRequests(function(){renderDashboard();});
+    }).withFailureHandler(function(err){
+      doneBtn.disabled=false;doneBtn.textContent='✔ ดำเนินการแล้วเสร็จทั้งหมด';
+      loadRequests(function(){renderDashboard();});
+      alert('ดำเนินการไม่สำเร็จ: '+(err&&err.message?err.message:err)+'\\nระบบจะโหลดรายการล่าสุดอีกครั้ง');
+    }).completeRequests(ids,currentAdminToken());
   });}
   updateBulkSelectionUI();
 }
