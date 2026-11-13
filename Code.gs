@@ -738,7 +738,7 @@ function findDuplicateBooking_(payload){
   var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
   for(var i=0;i<rows.length;i++){
     var r=rows[i],st=String(r['สถานะ']||STATUS.PENDING);if(excluded.indexOf(st)>=0)continue;
-    if(!same(r['รหัสบุคลากร'],payload.staffId)||!same(r['ชื่อ-นามสกุล'],payload.name)||!same(r['ปลายทาง'],payload.destination))continue;
+    if(normalizeStaffId_(r['รหัสบุคลากร'])!==normalizeStaffId_(payload.staffId)||!same(r['ชื่อ-นามสกุล'],payload.name)||!same(r['ปลายทาง'],payload.destination))continue;
     if(!sameDateValue_(r['วันที่ไป'],payload.dateGo)||normalizeTimeValue_(r['เวลาไป'])!==normalizeTimeValue_(payload.timeGo))continue;
     if(!sameDateValue_(r['วันที่กลับ'],payload.dateBack)||normalizeTimeValue_(r['เวลากลับ'])!==normalizeTimeValue_(payload.timeBack))continue;
     if(!same(r['รายชื่อผู้ร่วมเดินทาง'],payload.companionNames))continue;
