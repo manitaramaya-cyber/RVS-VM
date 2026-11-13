@@ -102,8 +102,13 @@ function formatDate_(v){if(!v)return '';var d=v instanceof Date?v:new Date(v);if
 function formatTime_(v){if(!v)return '';if(v instanceof Date)return Utilities.formatDate(v,Session.getScriptTimeZone(),'HH:mm');var s=String(v).trim();if(/^\d{1,2}:\d{2}:\d{2}$/.test(s))return s.substring(0,5);return s;}
 // ===== V1.2.9: คอลัมน์ใหม่ + ตัวช่วยอ่าน/พิมพ์ =====
 function ensureRequestColumns_(sh){
-  // เพิ่มหัวคอลัมน์ใหม่ต่อท้ายชีต Requests เมื่อยังไม่มี (ไม่แตะคอลัมน์/ข้อมูลเดิม)
+  // Normalize the request key header so every entry path writes to the same ID column.
   var lastCol=Math.max(sh.getLastColumn(),1),headers=sh.getRange(1,1,1,lastCol).getValues()[0];
+  var idAliases=['RequestID','Request Id','Request ID','รหัสคำขอ','รหัสคำร้อง'];
+  if(headers.indexOf('id')<0){var aliasIndex=-1;for(var ai=0;ai<idAliases.length;ai++){aliasIndex=headers.indexOf(idAliases[ai]);if(aliasIndex>=0)break;}
+    if(aliasIndex>=0){sh.getRange(1,aliasIndex+1).setValue('id');headers[aliasIndex]='id';}
+    else{var idCol=headers.length+1;if(sh.getMaxColumns()<idCol)sh.insertColumnsAfter(sh.getMaxColumns(),idCol-sh.getMaxColumns());sh.getRange(1,idCol).setValue('id');headers.push('id');}
+  }
   [REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_,DRIVER_FROM_COL_,DRIVER_TO_COL_].concat(CANCEL_REQUEST_COLS_).forEach(function(name){
     if(headers.indexOf(name)>=0)return;
     var need=headers.length+1;
@@ -117,7 +122,7 @@ function ensureRequestColumns_(sh){
 function cleanPhone_(v){return String(v==null?'':v).trim().replace(/[^\d+\-\s()]/g,'').slice(0,30);}
 function formatPhone_(v){var s=String(v==null?'':v).trim();return /^\d{9}$/.test(s)?'0'+s:s;} // ข้อมูลที่ Sheets แปลงเป็นตัวเลขจนเลข 0 นำหน้าหาย
 function requestToClient_(r){
-  return {id:String(r.id||''),staffId:String(r['รหัสบุคลากร']||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),driverFrom:dutyValue_(r[DRIVER_FROM_COL_]),driverTo:dutyValue_(r[DRIVER_TO_COL_]),requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),requesterPhone:formatPhone_(r[REQ_PHONE_COL_]),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||''),cancelRequestStatus:String(r['สถานะคำขอยกเลิก']||''),cancelStaffId:String(r['รหัสผู้ขอยกเลิก']||''),cancelName:String(r['ชื่อผู้ขอยกเลิก']||''),cancelReason:String(r['เหตุผลการขอยกเลิก']||''),cancelReviewedBy:String(r['ผู้พิจารณาคำขอยกเลิก']||'')};
+  return {id:String(r.id||r.RequestID||r['Request ID']||r['รหัสคำขอ']||''),staffId:String(r['รหัสบุคลากร']||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),driverFrom:dutyValue_(r[DRIVER_FROM_COL_]),driverTo:dutyValue_(r[DRIVER_TO_COL_]),requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),requesterPhone:formatPhone_(r[REQ_PHONE_COL_]),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||''),cancelRequestStatus:String(r['สถานะคำขอยกเลิก']||''),cancelStaffId:String(r['รหัสผู้ขอยกเลิก']||''),cancelName:String(r['ชื่อผู้ขอยกเลิก']||''),cancelReason:String(r['เหตุผลการขอยกเลิก']||''),cancelReviewedBy:String(r['ผู้พิจารณาคำขอยกเลิก']||'')};
 }
 // อ่านอย่างเดียว: ดึงข้อมูลล่าสุดของคำขอ 1 รายการตาม Request ID สำหรับพิมพ์ใบอนุญาต (ไม่เปลี่ยนสถานะ ไม่เขียนชีต ไม่เขียน AuditLog)
 function getRequestForPrint(id,adminToken){
@@ -697,6 +702,7 @@ function normalizeStaffId_(value){
 }
 
 function getBookingsForMonth(year,month){
+  ensureRequestColumns_(sheet_(SHEETS.REQUESTS));
   year=Number(year);month=Number(month);
   if(!year||month<1||month>12)throw new Error('เดือนหรือปีไม่ถูกต้อง');
   var monthStart=year+'-'+String(month).padStart(2,'0')+'-01';
@@ -729,7 +735,7 @@ function getBookingsForMonth(year,month){
     note:String(r['หมายเหตุ']||''),id:String(r.id||''),cancelRequestStatus:String(r['สถานะคำขอยกเลิก']||''),cancelStaffId:String(r['รหัสผู้ขอยกเลิก']||''),cancelName:String(r['ชื่อผู้ขอยกเลิก']||''),cancelReason:String(r['เหตุผลการขอยกเลิก']||'')
   };});
 }
-function getAllRequests(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).sort(function(a,b){return a.dateGo<b.dateGo?1:a.dateGo>b.dateGo?-1:0;});}
+function getAllRequests(adminToken){requireAdminSession_(adminToken);ensureRequestColumns_(sheet_(SHEETS.REQUESTS));return rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).sort(function(a,b){return a.dateGo<b.dateGo?1:a.dateGo>b.dateGo?-1:0;});}
 
 
 function normalizeDuplicateText_(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ');}
@@ -838,9 +844,20 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
 }
 function forecastVehicles(students,teachers,others,adminToken){requireAdminSession_(adminToken);var vehicles=getVehicles(adminToken).filter(function(v){return v.usagePermission!=='RESTRICTED';}).sort(function(a,b){return Number(b['ความจุ'])-Number(a['ความจุ']);}),groups=[{label:'นักเรียน',count:Number(students)||0},{label:'ครู',count:Number(teachers)||0},{label:'อื่นๆ',count:Number(others)||0}].filter(function(g){return g.count>0;}),plan=[],cautions=[],i=0,current=vehicles[0],remain=current?Number(current['ความจุ']):0,open=null;groups.forEach(function(g){var left=g.count;while(left>0&&current){var take=Math.min(left,remain);if(!open||open.vehicle!==current['ชื่อรถ']){open={vehicle:current['ชื่อรถ'],count:0,detail:[]};plan.push(open);}open.count+=take;open.detail.push(g.label+' '+take+' คน');left-=take;remain-=take;if(remain<=0){current=vehicles[++i];remain=current?Number(current['ความจุ']):0;open=null;}}if(left>0)cautions.push('รถในกองรถไม่พอสำหรับ'+g.label+'อีก '+left+' คน — ต้องพิจารณาวิ่งเพิ่มเที่ยว หรือหาทางเลือกอื่น');});plan.forEach(function(p){var v=vehicles.find(function(x){return x['ชื่อรถ']===p.vehicle;});if(v&&Number(v['ความจุ'])>=13&&p.count<=Number(v['ความจุ'])*.25)cautions.push(p.vehicle+' บรรทุกแค่ '+p.count+' คน (จุได้ '+v['ความจุ']+') — ลองย้ายไปรวมกับคันอื่นที่ยังมีที่ว่างแทนได้');});if(plan.filter(function(p){return p.vehicle.indexOf('หกล้อ')>-1;}).length>=2)cautions.push('ถ้าระยะทางใกล้พอให้รถหกล้อวิ่ง 2 เที่ยวทันเวลา อาจลดจำนวนรถที่ใช้ได้ — ควรโทรถามครูผู้ขอเรื่องระยะเวลาก่อนตัดสินใจ');return {plan:plan,cautions:cautions};}
 
-function getAuditSheet_(){var ss=ss_(),sh=ss.getSheetByName(AUDIT_SHEET_NAME);if(!sh){sh=ss.insertSheet(AUDIT_SHEET_NAME);sh.appendRow(['logId','timestamp','action','requestId','admin','oldStatus','newStatus','vehicles','detail']);sh.setFrozenRows(1);}return sh;}
-function appendAuditLog_(action,requestId,admin,oldStatus,newStatus,vehicles,detail){var sh=getAuditSheet_(),logId='LOG-'+Utilities.getUuid().substring(0,8).toUpperCase();sh.appendRow([logId,new Date(),action||'',requestId||'',admin||'',oldStatus||'',newStatus||'',vehicles||'',typeof detail==='string'?detail:JSON.stringify(detail||{})]);return logId;}
-function findRequestRowById_(id){var sh=sheet_(SHEETS.REQUESTS),values=sh.getDataRange().getValues();if(values.length<2)return null;var headers=values[0],idx=headers.indexOf('id');if(idx<0)throw new Error('ไม่พบคอลัมน์ id ในชีต Requests');for(var i=1;i<values.length;i++)if(String(values[i][idx])===String(id)){var obj={};headers.forEach(function(h,j){obj[h]=values[i][j];});return {sheet:sh,row:i+1,headers:headers,values:values[i],object:obj};}return null;}
+var AUDIT_HEADERS_=['logId','timestamp','action','requestId','admin','oldStatus','newStatus','vehicles','detail'];
+function getAuditSheet_(){
+  var ss=ss_(),sh=ss.getSheetByName(AUDIT_SHEET_NAME);if(!sh)sh=ss.insertSheet(AUDIT_SHEET_NAME);
+  var last=Math.max(sh.getLastColumn(),1),headers=sh.getRange(1,1,1,last).getValues()[0];
+  var aliases={logId:['LogID','Log Id','รหัส Log'],timestamp:['Timestamp','DateTime','วันที่เวลา'],action:['Action','Event','ประเภทการทำรายการ'],requestId:['RequestID','Request ID','Request Id','รหัสคำขอ'],admin:['Admin','User','ผู้ดำเนินการ'],oldStatus:['OldStatus','สถานะเดิม'],newStatus:['NewStatus','สถานะใหม่'],vehicles:['Vehicles','รถ'],detail:['Detail','Details','รายละเอียด']};
+  AUDIT_HEADERS_.forEach(function(h){if(headers.indexOf(h)>=0)return;var names=aliases[h]||[],idx=-1;for(var i=0;i<names.length;i++){idx=headers.indexOf(names[i]);if(idx>=0)break;}if(idx>=0){sh.getRange(1,idx+1).setValue(h);headers[idx]=h;}else{var col=headers.length+1;if(sh.getMaxColumns()<col)sh.insertColumnsAfter(sh.getMaxColumns(),col-sh.getMaxColumns());sh.getRange(1,col).setValue(h);headers.push(h);}});
+  sh.setFrozenRows(1);return sh;
+}
+function appendAuditLog_(action,requestId,admin,oldStatus,newStatus,vehicles,detail){
+  var sh=getAuditSheet_(),headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],row=new Array(headers.length).fill(''),logId='LOG-'+Utilities.getUuid().substring(0,8).toUpperCase();
+  var values={logId:logId,timestamp:new Date(),action:action||'',requestId:requestId||'',admin:admin||'',oldStatus:oldStatus||'',newStatus:newStatus||'',vehicles:vehicles||'',detail:typeof detail==='string'?detail:JSON.stringify(detail||{})};
+  headers.forEach(function(h,i){if(Object.prototype.hasOwnProperty.call(values,h))row[i]=values[h];});sh.appendRow(row);return logId;
+}
+function findRequestRowById_(id){var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);var values=sh.getDataRange().getValues();if(values.length<2)return null;var headers=values[0],idx=headers.indexOf('id');if(idx<0)throw new Error('ไม่พบคอลัมน์ id ในชีต Requests');for(var i=1;i<values.length;i++)if(String(values[i][idx])===String(id)){var obj={};headers.forEach(function(h,j){obj[h]=values[i][j];});return {sheet:sh,row:i+1,headers:headers,values:values[i],object:obj};}return null;}
 function findLatestMatchingRequest_(payload){var sh=sheet_(SHEETS.REQUESTS),values=sh.getDataRange().getValues();if(values.length<2)return null;var headers=values[0],idx={};headers.forEach(function(h,i){idx[h]=i;});var best=null,bestTs=0;for(var i=1;i<values.length;i++){var row=values[i];if(String(row[idx['ชื่อ-นามสกุล']]||'')!==String(payload.name||'')||String(row[idx['ปลายทาง']]||'')!==String(payload.destination||'')||!sameDateValue_(row[idx['วันที่ไป']],payload.dateGo)||normalizeTimeValue_(row[idx['เวลาไป']])!==normalizeTimeValue_(payload.timeGo))continue;var t=row[idx.timestamp],ts=t instanceof Date?t.getTime():new Date(t).getTime();if(ts>=bestTs){bestTs=ts;var obj={};headers.forEach(function(h,j){obj[h]=row[j];});best={row:i+1,object:obj};}}return best;}
 function saveRequestWithAudit(payload,adminToken){
   var actingAdmin=requireAdminSession_(adminToken);
@@ -849,7 +866,8 @@ function saveRequestWithAudit(payload,adminToken){
   // saveRequest owns the write lock and writes its own CREATE_BY_ADMIN audit entry.
   // Do not acquire the same script lock here; nested locking can time out.
   var result=saveRequest(payload,adminToken);
-  appendAuditLog_('CREATE',result.id,actingAdmin.account,'',STATUS.PENDING,'',{type:'CREATE',savedRequestId:result.id});
+  if(!result||!result.id)throw new Error('บันทึกคำขอแล้วแต่ไม่พบ RequestID กรุณาตรวจสอบชีต Requests');
+  appendAuditLog_('CREATE',result.id,actingAdmin.account,'',STATUS.PENDING,'',{type:'CREATE',requestId:result.id,savedRequestId:result.id,submittedName:payload.name,destination:payload.destination});
   return result;
 }
 
@@ -927,7 +945,7 @@ function deleteRequests(ids,adminToken){
     return {ok:true,deleted:deleted.length,deletedIds:deleted,failed:[]};
   }finally{lock.releaseLock();}
 }
-function getAuditLogs(adminToken){requireAdminSession_(adminToken);var sh=getAuditSheet_(),values=sh.getDataRange().getValues();if(values.length<2)return [];var headers=values[0],out=[];for(var i=values.length-1;i>=1;i--){var row=values[i],o={};headers.forEach(function(h,j){o[h]=row[j];});out.push({logId:o.logId||'',timestamp:o.timestamp instanceof Date?o.timestamp.toISOString():String(o.timestamp||''),action:o.action||'',requestId:o.requestId||'',admin:o.admin||'',oldStatus:o.oldStatus||'',newStatus:o.newStatus||'',vehicles:o.vehicles||'',detail:o.detail||''});}return out;}
+function getAuditLogs(adminToken){requireAdminSession_(adminToken);var sh=getAuditSheet_(),values=sh.getDataRange().getValues();if(values.length<2)return [];var headers=values[0],out=[];for(var i=values.length-1;i>=1;i--){var row=values[i],o={};headers.forEach(function(h,j){o[h]=row[j];});if(!o.logId&&!o.timestamp&&!o.action&&!o.requestId)continue;out.push({logId:o.logId||'',timestamp:o.timestamp instanceof Date?o.timestamp.toISOString():String(o.timestamp||''),action:o.action||'',requestId:o.requestId||'',admin:o.admin||'',oldStatus:o.oldStatus||'',newStatus:o.newStatus||'',vehicles:o.vehicles||'',detail:o.detail||''});}return out;}
 
 var CONFLICT_ACK_SHEET='ConflictAcknowledgements';
 function getConflictAckSheet_(){
