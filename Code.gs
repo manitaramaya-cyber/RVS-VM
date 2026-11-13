@@ -940,8 +940,18 @@ function requestCancelBooking(payload){
   try{
     var requestSheet=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(requestSheet);
     var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบคำร้องใช้รถรายการนี้');
-    var r=found.object;if(normalizeStaffId_(r['รหัสบุคลากร'])!==staffId||normalizeDuplicateText_(r['ชื่อ-นามสกุล'])!==normalizeDuplicateText_(name))throw new Error('รหัสประจำตัวครูหรือชื่อไม่ตรงกับข้อมูลผู้ขอใช้รถ');
-    var staff=lookupStaffByIdWithoutAuth_(staffId);if(staff&&normalizeDuplicateText_(staff.name)!==normalizeDuplicateText_(name))throw new Error('ชื่อไม่ตรงกับทะเบียนบุคลากร กรุณาตรวจสอบข้อมูล');
+    var r=found.object;
+    var storedStaffId=normalizeStaffId_(r['รหัสบุคลากร']);
+    var storedName=normalizeDuplicateText_(r['ชื่อ-นามสกุล']);
+    var submittedName=normalizeDuplicateText_(name);
+    // ชื่อต้องตรงกับผู้ขอในรายการเดิมเสมอ
+    if(storedName!==submittedName)throw new Error('ชื่อผู้ขอยกเลิกไม่ตรงกับชื่อผู้ขอใช้รถในรายการ กรุณากรอกชื่อให้ตรงกับรายการจอง');
+    // รายการเก่าหรือรายการที่ Admin บันทึกอาจไม่มีรหัสบุคลากร:
+    // ถ้ามีรหัสเดิม ต้องตรงกัน; ถ้าไม่มี ให้ยืนยันด้วยทะเบียนบุคลากรแทน
+    if(storedStaffId&&storedStaffId!==staffId)throw new Error('รหัสประจำตัวครูไม่ตรงกับรายการจอง กรุณาตรวจสอบรหัสอีกครั้ง');
+    var staff=lookupStaffByIdWithoutAuth_(staffId);
+    if(!storedStaffId&&!staff)throw new Error('รายการจองนี้ไม่มีรหัสบุคลากรเดิม กรุณาใช้รหัสที่มีอยู่ในทะเบียนบุคลากรของโรงเรียน');
+    if(staff&&normalizeDuplicateText_(staff.name)!==submittedName)throw new Error('ชื่อไม่ตรงกับทะเบียนบุคลากร กรุณากรอกชื่อ-นามสกุลตามทะเบียนบุคลากร');
     var status=String(r['สถานะ']||STATUS.PENDING);if([STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE].indexOf(status)>=0)throw new Error('คำร้องนี้สิ้นสุดแล้ว ไม่สามารถขอยกเลิกซ้ำได้');
     if(String(r['สถานะคำขอยกเลิก']||'')==='รอพิจารณา')throw new Error('คำร้องนี้มีคำขอยกเลิกอยู่ระหว่างรอแอดมินพิจารณาแล้ว');
     var sh=found.sheet,headers=found.headers;function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
