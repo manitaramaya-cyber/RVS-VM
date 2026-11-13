@@ -732,7 +732,7 @@ function getBookingsForMonth(year,month){
 function getAllRequests(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).sort(function(a,b){return a.dateGo<b.dateGo?1:a.dateGo>b.dateGo?-1:0;});}
 
 
-function normalizeDuplicateText_(v){return String(v==null?'':v).trim().toLowerCase().replace(/\\s+/g,' ');}
+function normalizeDuplicateText_(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ');}
 function findDuplicateBooking_(payload){
   var rows=rowsToObjects_(sheet_(SHEETS.REQUESTS)),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
   var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
@@ -857,6 +857,7 @@ function requestCancelBooking(payload){
   if(reason.length>1000)throw new Error('สาเหตุการยกเลิกยาวเกิน 1,000 ตัวอักษร');
   var lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
+    var requestSheet=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(requestSheet);
     var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบคำร้องใช้รถรายการนี้');
     var r=found.object;if(normalizeStaffId_(r['รหัสบุคลากร'])!==staffId||normalizeDuplicateText_(r['ชื่อ-นามสกุล'])!==normalizeDuplicateText_(name))throw new Error('รหัสประจำตัวครูหรือชื่อไม่ตรงกับข้อมูลผู้ขอใช้รถ');
     var staff=lookupStaffByIdWithoutAuth_(staffId);if(staff&&normalizeDuplicateText_(staff.name)!==normalizeDuplicateText_(name))throw new Error('ชื่อไม่ตรงกับทะเบียนบุคลากร กรุณาตรวจสอบข้อมูล');
@@ -870,6 +871,7 @@ function requestCancelBooking(payload){
 function resolveCancelRequest(id,approve,adminToken){
   var admin=requireAdminSession_(adminToken),lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
+    var requestSheet=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(requestSheet);
     var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบคำร้องใช้รถ');var r=found.object;
     if(String(r['สถานะคำขอยกเลิก']||'')!=='รอพิจารณา')throw new Error('ไม่มีคำขอยกเลิกที่รอพิจารณา');
     var oldStatus=String(r['สถานะ']||STATUS.PENDING),newStatus=approve?STATUS.CANCELLED:oldStatus,decision=approve?'ดำเนินการแล้ว':'ไม่อนุมัติ';
