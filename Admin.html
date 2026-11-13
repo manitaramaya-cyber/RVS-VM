@@ -3183,6 +3183,15 @@ function updateBulkSelectionUI(){
 }
 function bindBulkDeleteControls(){
   var all=document.getElementById('bulkSelectAll'),btn=document.getElementById('bulkDeleteBtn'),list=document.getElementById('requestList');
+  if(document.documentElement.dataset.dotTimeBound!=='1'){
+    document.documentElement.dataset.dotTimeBound='1';
+    document.addEventListener('input',function(e){
+      var el=e.target;
+      if(!el||(!(/^(timeGo|timeBack)$/.test(el.id))&&!el.classList.contains('ed-timeGo')&&!el.classList.contains('ed-timeBack')))return;
+      var digits=String(el.value||'').replace(/\D/g,'').slice(0,4);
+      el.value=digits.length>2?digits.slice(0,2)+'.'+digits.slice(2):digits;
+    });
+  }
   if(all&&all.dataset.bound!=='1'){all.dataset.bound='1';all.addEventListener('change',function(){document.querySelectorAll('.request-select-checkbox').forEach(function(el){el.checked=all.checked;});updateBulkSelectionUI();});}
   if(list&&list.dataset.bulkBound!=='1'){list.dataset.bulkBound='1';list.addEventListener('change',function(e){if(e.target&&e.target.classList.contains('request-select-checkbox'))updateBulkSelectionUI();});}
   if(btn&&btn.dataset.bound!=='1'){btn.dataset.bound='1';btn.addEventListener('click',function(){
@@ -3782,7 +3791,7 @@ function pfOnOpen(b){
 <div class="pf-overlay" id="pfOverlay"><div class="pf-bar"><button type="button" class="pf-btn prim" onclick="pfDownloadPdf()" id="pfBtnDl">⬇️ ดาวน์โหลด PDF</button><button type="button" class="pf-btn" onclick="pfSharePdf()" id="pfBtnShare">📤 แชร์ / ส่งต่อทาง LINE</button><button type="button" class="pf-btn" onclick="printForm()">🖨️ พิมพ์</button><button type="button" class="pf-btn" onclick="closePrintForm()">ปิด</button><div class="pf-tip" id="pfInfo"></div><div class="pf-note" id="pfNote"></div><div class="pf-note" id="pfStatus"></div><div class="pf-tip">มือถือ/แท็บเล็ต: กด "ดาวน์โหลด PDF" หรือ "แชร์ / ส่งต่อทาง LINE" เพื่อส่งให้เพื่อนที่มีเครื่องพิมพ์ • คอมพิวเตอร์: กด "พิมพ์" (A4 • มาตราส่วน 100% • ขอบ "ไม่มี")</div></div><div class="pf-scroll"><div class="pf-zoom" id="pfZoom"><div class="pf-paper" id="pfPaper"></div></div></div></div>
 <!-- System Footer: V1.2.9 -->
 <footer class="system-footer no-print">
-  <div>เวอร์ชั่นปัจจุบัน V1.2.9 • build 2 พ.ย. 2569 (รอบ 11: V2.0.0 ประวัติซ่อมบำรุง)</div>
+  <div>เวอร์ชั่นปัจจุบัน V1.3.0 • build 13 พ.ย. 2569</div>
   <div>พัฒนาระบบโดย นายฉัตรชัย มนิตรัมย์ หัวหน้าแผนกภาษาต่างประเทศ</div>
   <div>ร่วมกับ นายกิตติพันธ์ สมบัติ งานยานพาหนะ ฝ่ายบริหารงานทั่วไป</div>
 </footer>
