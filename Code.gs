@@ -733,6 +733,7 @@ function getAllRequests(adminToken){requireAdminSession_(adminToken);return rows
 
 
 function normalizeDuplicateText_(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ');}
+function normalizeCompanionList_(v){return String(v==null?'':v).split(/[\\n,;]+/).map(function(x){return normalizeDuplicateText_(x);}).filter(Boolean).sort().join('|');}
 function findDuplicateBooking_(payload){
   var rows=rowsToObjects_(sheet_(SHEETS.REQUESTS)),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
   var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
@@ -741,7 +742,7 @@ function findDuplicateBooking_(payload){
     if(normalizeStaffId_(r['รหัสบุคลากร'])!==normalizeStaffId_(payload.staffId)||!same(r['ชื่อ-นามสกุล'],payload.name)||!same(r['ปลายทาง'],payload.destination))continue;
     if(!sameDateValue_(r['วันที่ไป'],payload.dateGo)||normalizeTimeValue_(r['เวลาไป'])!==normalizeTimeValue_(payload.timeGo))continue;
     if(!sameDateValue_(r['วันที่กลับ'],payload.dateBack)||normalizeTimeValue_(r['เวลากลับ'])!==normalizeTimeValue_(payload.timeBack))continue;
-    if(!same(r['รายชื่อผู้ร่วมเดินทาง'],payload.companionNames))continue;
+    if(normalizeCompanionList_(r['รายชื่อผู้ร่วมเดินทาง'])!==normalizeCompanionList_(payload.companionNames))continue;
     if((Number(r['จำนวนผู้ร่วมเดินทาง'])||0)!==(Number(payload.companionCount)||0)||(Number(r['จำนวนนักเรียน'])||0)!==(Number(payload.students)||0)||(Number(r['จำนวนครู'])||0)!==(Number(payload.teachers)||0)||(Number(r['จำนวนอื่นๆ'])||0)!==(Number(payload.others)||0))continue;
     var oldNeed=String(r['ต้องการคนขับ']||'').trim()==='ต้องการ',newNeed=(payload.needDriver===true||payload.needDriver==='1'||payload.needDriver==='ต้องการ');
     if(oldNeed!==newNeed)continue;if(!newNeed&&!same(r[REQ_DRIVER_NAME_COL_],payload.requestedDriver))continue;
