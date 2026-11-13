@@ -1624,6 +1624,9 @@ document
             renderFleet();
           });
         }
+        if(tab.dataset.v === 'report'){
+          loadReport();
+        }
       }
     );
   });
@@ -3518,9 +3521,9 @@ function reportDate(v){
   if(isNaN(d.getTime())) return s;
   return d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'});
 }
-function reportActionLabel(a){return a==='CREATE'?'สร้างรายการ':a==='DELETE'?'ลบรายการ':a==='EDIT_DETAILS'?'แก้ไขรายละเอียดคำขอ':a==='COMPLETE'?'ดำเนินการแล้วเสร็จ':a==='UPDATE'?'แก้ไข / เปลี่ยนสถานะ':a==='ACK_CONFLICT'?'รับทราบรถซ้ำซ้อน':a==='DOC_CREATE'?'บันทึกเอกสารรถใหม่':a==='DOC_RENEW'?'ต่ออายุเอกสารรถ':a==='DOC_EDIT'?'แก้ไขเอกสารรถ':a==='DOC_ACK'?'รับทราบวันหมดอายุเอกสารรถ':a==='MAINT_CREATE'?'บันทึกประวัติซ่อมบำรุง':a==='MAINT_EDIT'?'แก้ไขประวัติซ่อมบำรุง':a==='MAINT_DONE'?'ดำเนินการเข้ารับการซ่อมบำรุงแล้ว':a==='MAINT_DISMISS'?'ปิดการแจ้งเตือนซ่อมบำรุง':(a||'ทำรายการ');}
+function reportActionLabel(a){return a==='CREATE'||a==='CREATE_BY_ADMIN'?'สร้างรายการ':a==='PUBLIC_BOOKING_SUBMITTED'?'รับคำขอจากแบบฟอร์ม':a==='DELETE'?'ลบรายการ':a==='EDIT_DETAILS'?'แก้ไขรายละเอียดคำขอ':a==='COMPLETE'?'ดำเนินการแล้วเสร็จ':a==='UPDATE'?'แก้ไข / เปลี่ยนสถานะ':a==='ACK_CONFLICT'?'รับทราบรถซ้ำซ้อน':a==='CANCEL_REQUEST_SUBMITTED'?'ขอยกเลิกคำร้อง':a==='CANCEL_REQUEST_APPROVED_DELETE'?'อนุมัติและลบคำร้อง':a==='CANCEL_REQUEST_DECLINED'?'ไม่อนุมัติคำขอยกเลิก':a==='DOC_CREATE'?'บันทึกเอกสารรถใหม่':a==='DOC_RENEW'?'ต่ออายุเอกสารรถ':a==='DOC_EDIT'?'แก้ไขเอกสารรถ':a==='DOC_ACK'?'รับทราบวันหมดอายุเอกสารรถ':a==='MAINT_CREATE'?'บันทึกประวัติซ่อมบำรุง':a==='MAINT_EDIT'?'แก้ไขประวัติซ่อมบำรุง':a==='MAINT_DONE'?'ดำเนินการเข้ารับการซ่อมบำรุงแล้ว':a==='MAINT_DISMISS'?'ปิดการแจ้งเตือนซ่อมบำรุง':(a||'ทำรายการ');}
 function reportActionClass(a){return a==='DELETE'?'status-rejected':(a==='CREATE'||a==='COMPLETE')?'status-done':'status-approved';}
-function reportSource(log){if(!log)return {};if(log.deletedRequest||log.request||log.data||log.details||log.record)return log.deletedRequest||log.request||log.data||log.details||log.record;var detail=log.detail;if(typeof detail==='string'&&detail){try{detail=JSON.parse(detail);}catch(e){detail={};}}return detail&&(detail.deletedRequest||detail.request||detail.after||detail.before||detail.data||detail.details||detail.record)||{};}
+function reportSource(log){if(!log)return {};if(log.deletedRequest||log.request||log.data||log.details||log.record)return log.deletedRequest||log.request||log.data||log.details||log.record;var detail=log.detail;if(typeof detail==='string'&&detail){try{detail=JSON.parse(detail);}catch(e){detail={raw:detail};}}return detail&&(detail.deletedRequest||detail.request||detail.after||detail.before||detail.data||detail.details||detail.record||detail)||{};}
 function reportField(label,value,full){
   if(value==null||String(value).trim()==='') return '';
   return '<div class="report-field'+(full?' full':'')+'"><div class="report-label">'+reportEsc(label)+'</div><div class="report-value">'+reportEsc(value)+'</div></div>';
@@ -3539,8 +3542,8 @@ function reportDetails(log){
     html+=reportField('แนบไฟล์ PDF',r.hasFile?'มี':'ไม่มี');html+=reportField('หมายเหตุ',r.note,true);
     return html||'<div class="empty">ไม่มีรายละเอียดเพิ่มเติม</div>';
   }
-  html+=reportField('ID',r.id||log.id);
-  html+=reportField('ผู้ขอ',r['ชื่อ-นามสกุล']||r.name);
+  html+=reportField('RequestID',log.requestId||r.requestId||r.id||log.id);
+  html+=reportField('ผู้ขอ',r['ชื่อ-นามสกุล']||r.name||r.submittedName||r.requester);
   html+=reportField('ตำแหน่ง',r['ตำแหน่ง']||r.position);
   html+=reportField('สังกัด',r['สังกัด']||r.department);
   html+=reportField('ปลายทาง',r['ปลายทาง']||r.destination);
@@ -3558,7 +3561,7 @@ function reportDetails(log){
   html+=reportField('อื่น ๆ',r['จำนวนอื่นๆ']!=null?r['จำนวนอื่นๆ']:r.others);
   html+=reportField('สถานะ',r['สถานะ']||r.status);
   html+=reportField('รถที่จัด',r['รถที่จัด']||r.vehicles||r.vehicle);
-  html+=reportField('ผู้บันทึก',r['ผู้บันทึก']||r.recordedBy||log.recordedBy||log.user);
+  html+=reportField('ผู้บันทึก / Admin',r['ผู้บันทึก']||r.recordedBy||log.admin||log.recordedBy||log.user);
   html+=reportField('หมายเหตุ',r['หมายเหตุ']||r.note,true);
   return html||'<div class="empty">ไม่มีรายละเอียดเพิ่มเติม</div>';
 }
@@ -3568,7 +3571,7 @@ function renderReport(){
   var filter=((document.getElementById('reportAction')||{}).value||'').toUpperCase();
   var rows=(auditLogs||[]).filter(function(log){
     var a=String(log.type||log.action||'').toUpperCase();
-    if(filter && a!==filter) return false;
+    if(filter && !(a===filter||(filter==='CREATE'&&a.indexOf('CREATE')===0)||(filter==='DELETE'&&a.indexOf('DELETE')===0)||(filter==='UPDATE'&&a.indexOf('UPDATE')===0))) return false;
     if(!q) return true;
     return (JSON.stringify(log)+' '+JSON.stringify(reportSource(log))+' '+String(log.requestId||'')).toLowerCase().indexOf(q)>=0;
   });
@@ -3576,9 +3579,9 @@ function renderReport(){
   box.innerHTML=rows.map(function(log,i){
     var a=String(log.type||log.action||'UPDATE').toUpperCase();
     var r=reportSource(log);
-    var who=r['ชื่อ-นามสกุล']||r.name||'';
-    var id=r.id||log.id||log.requestId||'';
-    var by=r['ผู้บันทึก']||r.recordedBy||log.recordedBy||log.user||'';
+    var who=r['ชื่อ-นามสกุล']||r.name||r.submittedName||r.requester||r.requesterName||'';
+    var id=log.requestId||r.requestId||r.id||log.id||'';
+    var by=r['ผู้บันทึก']||r.recordedBy||log.admin||log.recordedBy||log.user||'';
     var ts=log.timestamp||log.time||log.createdAt||'';
     var actionLabel=(a==='UPDATE'&&String(r['สถานะ']||r.status||'')==='ปฏิเสธ')?'ปฏิเสธคำขอ':reportActionLabel(a);
     return '<div class="report-item"><div class="report-head"><div><div class="report-action"><span class="status-badge '+reportActionClass(a)+'"><span class="status-dot"></span>'+reportEsc(actionLabel)+'</span> '+reportEsc(id)+'</div><div class="report-meta">'+reportEsc(who)+(by?' · '+reportEsc(by):'')+(ts?' · '+reportEsc(reportDate(ts))+' '+reportEsc(reportTime(ts)):'')+'</div></div><button class="report-expand" type="button" onclick="toggleReportDetails(this)">รายละเอียด</button></div><div class="report-details" style="display:none">'+reportDetails(log)+'</div></div>';
@@ -3587,8 +3590,9 @@ function renderReport(){
 function toggleReportDetails(btn){var box=btn.parentNode.parentNode.querySelector('.report-details');var open=box.style.display!=='none';box.style.display=open?'none':'grid';btn.textContent=open?'รายละเอียด':'ซ่อนรายละเอียด';}
 function loadReport(){
   var box=document.getElementById('reportList'); if(!box) return;
+  if(!currentAdminToken()){box.innerHTML='<div class="empty">เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่</div>';return;}
   box.innerHTML='<div class="loading">กำลังโหลด Log...</div>';
-  google.script.run.withSuccessHandler(function(data){auditLogs=Array.isArray(data)?data:[];renderReport();}).withFailureHandler(function(err){box.innerHTML='<div class="empty">โหลด Log ไม่สำเร็จ</div>';alert('โหลด Log ไม่สำเร็จ: '+(err&&err.message?err.message:err));}).getAuditLogs(currentAdminToken());
+  google.script.run.withSuccessHandler(function(data){auditLogs=Array.isArray(data)?data:[];renderReport();}).withFailureHandler(function(err){auditLogs=[];box.innerHTML='<div class="empty">โหลด Log ไม่สำเร็จ: '+reportEsc((err&&err.message)||err)+'</div>';}).getAuditLogs(currentAdminToken());
 }
 </script>
 <script>
@@ -3834,7 +3838,7 @@ function pfOnOpen(b){
         </select>
         <button class="btn secondary" type="button" onclick="loadReport()">↻ โหลด Log</button>
       </div>
-      <div id="reportList"><div class="empty">กด “โหลด Log” เพื่อดูประวัติ</div></div>
+      <div id="reportList" style="min-width:0;width:100%;max-width:100%;overflow-x:hidden;overflow-wrap:anywhere;box-sizing:border-box"><div class="empty">เลือกแท็บ Log เพื่อโหลดประวัติ</div></div>
     </div>
   </div>
 <div class="pf-overlay" id="pfOverlay"><div class="pf-bar"><button type="button" class="pf-btn prim" onclick="pfDownloadPdf()" id="pfBtnDl">⬇️ ดาวน์โหลด PDF</button><button type="button" class="pf-btn" onclick="pfSharePdf()" id="pfBtnShare">📤 แชร์ / ส่งต่อทาง LINE</button><button type="button" class="pf-btn" onclick="printForm()">🖨️ พิมพ์</button><button type="button" class="pf-btn" onclick="closePrintForm()">ปิด</button><div class="pf-tip" id="pfInfo"></div><div class="pf-note" id="pfNote"></div><div class="pf-note" id="pfStatus"></div><div class="pf-tip">มือถือ/แท็บเล็ต: กด "ดาวน์โหลด PDF" หรือ "แชร์ / ส่งต่อทาง LINE" เพื่อส่งให้เพื่อนที่มีเครื่องพิมพ์ • คอมพิวเตอร์: กด "พิมพ์" (A4 • มาตราส่วน 100% • ขอบ "ไม่มี")</div></div><div class="pf-scroll"><div class="pf-zoom" id="pfZoom"><div class="pf-paper" id="pfPaper"></div></div></div></div>
