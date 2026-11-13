@@ -3716,7 +3716,7 @@ function openAdminPrintForm(rec){
 // ปุ่มพิมพ์ประจำแต่ละคำขอ: อ้าง เลขที่คำขอ ของคำขอที่กดเท่านั้น และดึงข้อมูลล่าสุดจากชีตแบบอ่านอย่างเดียว (getRequestForPrint)
 function dashboardPrintRequest(id,btn){
   id=String(id||'').trim();
-  if(!id){alert('รายการนี้ไม่มีรหัสคำขอ (เลขที่คำขอ) จึงพิมพ์ไม่ได้');return}
+  if(!id){alert('รายการนี้ไม่มีเลขที่คำขอ จึงพิมพ์ไม่ได้');return}
   const seq=++pfReqSeq,label=btn?btn.textContent:'';
   if(btn){btn.disabled=true;btn.textContent='กำลังโหลดข้อมูล...'}
   const restore=()=>{if(btn){btn.disabled=false;btn.textContent=label}};
