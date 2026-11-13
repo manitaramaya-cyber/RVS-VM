@@ -104,10 +104,15 @@ function formatTime_(v){if(!v)return '';if(v instanceof Date)return Utilities.fo
 function ensureRequestColumns_(sh){
   // Normalize the request key header so every entry path writes to the same ID column.
   var lastCol=Math.max(sh.getLastColumn(),1),headers=sh.getRange(1,1,1,lastCol).getValues()[0];
-  var idAliases=['RequestID','Request Id','Request ID','รหัสคำขอ','รหัสคำร้อง'];
-  if(headers.indexOf('id')<0){var aliasIndex=-1;for(var ai=0;ai<idAliases.length;ai++){aliasIndex=headers.indexOf(idAliases[ai]);if(aliasIndex>=0)break;}
-    if(aliasIndex>=0){sh.getRange(1,aliasIndex+1).setValue('id');headers[aliasIndex]='id';}
-    else{var idCol=headers.length+1;if(sh.getMaxColumns()<idCol)sh.insertColumnsAfter(sh.getMaxColumns(),idCol-sh.getMaxColumns());sh.getRange(1,idCol).setValue('id');headers.push('id');}
+  var idAliases=['RequestID','Request Id','Request ID','รหัสคำขอ','รหัสคำร้อง'],idIndex=headers.indexOf('id'),aliasIndex=-1;
+  for(var ai=0;ai<idAliases.length;ai++){aliasIndex=headers.indexOf(idAliases[ai]);if(aliasIndex>=0)break;}
+  if(idIndex<0){
+    if(aliasIndex>=0){sh.getRange(1,aliasIndex+1).setValue('id');headers[aliasIndex]='id';idIndex=aliasIndex;}
+    else{var idCol=headers.length+1;if(sh.getMaxColumns()<idCol)sh.insertColumnsAfter(sh.getMaxColumns(),idCol-sh.getMaxColumns());sh.getRange(1,idCol).setValue('id');headers.push('id');idIndex=idCol-1;}
+  }else if(aliasIndex>=0&&aliasIndex!==idIndex&&sh.getLastRow()>1){
+    var idRows=sh.getRange(2,idIndex+1,sh.getLastRow()-1,1).getValues(),aliasRows=sh.getRange(2,aliasIndex+1,sh.getLastRow()-1,1).getValues(),changed=false;
+    for(var ri=0;ri<idRows.length;ri++)if(!idRows[ri][0]&&aliasRows[ri][0]){idRows[ri][0]=aliasRows[ri][0];changed=true;}
+    if(changed)sh.getRange(2,idIndex+1,idRows.length,1).setValues(idRows);
   }
   [REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_,DRIVER_FROM_COL_,DRIVER_TO_COL_].concat(CANCEL_REQUEST_COLS_).forEach(function(name){
     if(headers.indexOf(name)>=0)return;
