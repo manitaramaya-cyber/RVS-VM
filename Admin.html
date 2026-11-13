@@ -316,19 +316,35 @@ textarea{
 }
 .request-grid{
   display:grid;
-  grid-template-columns:1.1fr 1fr 1fr 1fr;
-  gap:10px;
+  grid-template-columns:minmax(0,1.2fr) minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.25fr);
+  gap:9px;
   margin-top:14px;
   padding-top:12px;
   border-top:1px solid var(--line);
+  align-items:stretch;
+}
+.request-grid>div{
+  min-width:0;
+  padding:9px 10px;
+  background:rgba(255,255,255,.035);
+  border:1px solid var(--line);
+  border-radius:6px;
 }
 .info-label{
   color:var(--dim);
   font-size:12.5px;
-  margin-bottom:3px;
+  line-height:1.4;
+  margin-bottom:5px;
 }
 .info-value{
+  min-width:0;
   font-size:14.5px;
+  line-height:1.55;
+  overflow-wrap:anywhere;
+  white-space:pre-wrap;
+}
+.info-value.note-value{
+  color:var(--ink);
 }
 .request-actions{
   margin-top:13px;
@@ -560,7 +576,7 @@ textarea{
     grid-template-columns:repeat(2,1fr);
   }
   .request-grid{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:repeat(2,minmax(0,1fr));
   }
   .action-grid{
     grid-template-columns:1fr;
@@ -581,7 +597,11 @@ textarea{
     flex-direction:column;
   }
   .request-grid{
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+  .request-grid>div{
+    padding:8px;
   }
   .calendar{
     min-width:0;
@@ -2340,23 +2360,29 @@ function renderRequests(){
             '</div>' +
           '</div>' +
           '<div class="request-grid">' +
-            '<div>' +
+            '<div class="request-info-purpose">' +
               '<div class="info-label">วัตถุประสงค์</div>' +
               '<div class="info-value">' +
                 esc(r.purpose || '-') +
               '</div>' +
             '</div>' +
-            '<div>' +
+            '<div class="request-info-driver">' +
               '<div class="info-label">คนขับ</div>' +
               '<div class="info-value">' +
                 esc(r.needDriver || '-') +
                 (r.driver ? ' • ' + esc(r.driver) : '') +
               '</div>' +
             '</div>' +
-            '<div>' +
+            '<div class="request-info-recorder">' +
               '<div class="info-label">ผู้บันทึก</div>' +
               '<div class="info-value">' +
                 esc(r.recordedBy || '-') +
+              '</div>' +
+            '</div>' +
+            '<div class="request-info-note">' +
+              '<div class="info-label">หมายเหตุ</div>' +
+              '<div class="info-value note-value">' +
+                esc(r.note || '-') +
               '</div>' +
             '</div>' +
           '</div>' +
