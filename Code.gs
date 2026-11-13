@@ -873,7 +873,7 @@ function saveRequestWithAudit(payload,adminToken){
   // Do not acquire the same script lock here; nested locking can time out.
   var result=saveRequest(payload,adminToken);
   if(!result||!result.id)throw new Error('บันทึกคำขอแล้วแต่ไม่พบ RequestID กรุณาตรวจสอบชีต Requests');
-  appendAuditLog_('CREATE',result.id,actingAdmin.account,'',STATUS.PENDING,'',{type:'CREATE',requestId:result.id,savedRequestId:result.id,submittedName:payload.name,destination:payload.destination});
+  // saveRequest already writes one CREATE_BY_ADMIN audit entry with this exact RequestID.
   return result;
 }
 
