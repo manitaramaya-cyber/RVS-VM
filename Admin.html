@@ -3204,7 +3204,8 @@ function bindBulkDeleteControls(){
       loadRequests(function(){renderDashboard();});
     }).withFailureHandler(function(err){
       btn.disabled=false;btn.textContent='🗑 ลบรายการที่เลือก';
-      alert('ลบหลายรายการไม่สำเร็จ: '+(err&&err.message?err.message:err));
+      loadRequests(function(){renderDashboard();});
+      alert('ลบหลายรายการไม่สำเร็จ: '+(err&&err.message?err.message:err)+'\\nระบบจะโหลดรายการล่าสุดอีกครั้งเพื่อป้องกันข้อมูลบนหน้าจอคลาดเคลื่อน');
     }).deleteRequests(ids,currentAdminToken());
   });}
   updateBulkSelectionUI();
