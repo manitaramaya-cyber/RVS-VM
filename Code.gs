@@ -114,6 +114,21 @@ function ensureRequestColumns_(sh){
     for(var ri=0;ri<idRows.length;ri++)if(!idRows[ri][0]&&aliasRows[ri][0]){idRows[ri][0]=aliasRows[ri][0];changed=true;}
     if(changed)sh.getRange(2,idIndex+1,idRows.length,1).setValues(idRows);
   }
+  // Backfill IDs for every populated legacy request row that has no key yet.
+  var requestLastRow=sh.getLastRow();
+  if(requestLastRow>1){
+    var currentIds=sh.getRange(2,idIndex+1,requestLastRow-1,1).getValues();
+    var requestRows=sh.getRange(2,1,requestLastRow-1,sh.getLastColumn()).getValues();
+    var idsChanged=false;
+    for(var bi=0;bi<requestRows.length;bi++){
+      if(currentIds[bi][0])continue;
+      var populated=requestRows[bi].some(function(value){return value!==''&&value!==null;});
+      if(!populated)continue;
+      currentIds[bi][0]='R'+new Date().getTime()+'-'+Utilities.getUuid().substring(0,6).toUpperCase();
+      idsChanged=true;
+    }
+    if(idsChanged)sh.getRange(2,idIndex+1,currentIds.length,1).setValues(currentIds);
+  }
   [REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_,DRIVER_FROM_COL_,DRIVER_TO_COL_].concat(CANCEL_REQUEST_COLS_).forEach(function(name){
     if(headers.indexOf(name)>=0)return;
     var need=headers.length+1;
