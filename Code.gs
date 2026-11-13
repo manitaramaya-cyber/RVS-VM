@@ -1,11 +1,12 @@
 var ADMIN_KEY='rav-fleet-x9k2m7'; // ใช้เลือกหน้าเว็บเท่านั้น ไม่ใช่การยืนยันสิทธิ์ Admin
 var SHEETS={STAFF:'Staff',REQUESTS:'Requests',VEHICLES:'Vehicles',DRIVERS:'Drivers'};
-var APP_VERSION='V1.3.0'; // Bulk Delete + Bulk Complete + HH.MM time input
+var APP_VERSION='V1.3.1'; // Cancellation requests + duplicate booking guard
 var REQ_DRIVER_NAME_COL_='ชื่อผู้ขับรถที่ผู้ขอระบุ'; // V1.2.9: ชื่อผู้ขับรถที่ผู้ขอใช้รถระบุเอง (แยกจาก DRIVER_COL_ ที่ Admin จัดสรร ห้ามเขียนทับกัน)
 var REQ_PHONE_COL_='เบอร์โทรผู้ขอใช้รถ'; // V1.2.9: เบอร์ติดต่อผู้ขอใช้รถ (เฉพาะ Admin เห็น ไม่ส่งออกใน getBookingsForMonth)
 var DRIVER_COL_='คนขับที่จัด'; // คอลัมน์ในชีต Requests (ถ้ายังไม่มี ระบบจะสร้างให้อัตโนมัติเมื่อบันทึกคนขับครั้งแรก)
 var DRIVER_FROM_COL_='คนขับเริ่มปฏิบัติหน้าที่'; // V1.2.9 (9 พ.ย. 69): วัน-เวลาที่คนขับที่ Admin จัดสรรเริ่มปฏิบัติหน้าที่ (เก็บเป็นข้อความ yyyy-MM-dd HH:mm)
 var DRIVER_TO_COL_='คนขับสิ้นสุดปฏิบัติหน้าที่'; // V1.2.9 (9 พ.ย. 69): วัน-เวลาที่คนขับสิ้นสุดการปฏิบัติหน้าที่ — ใช้ตรวจคนขับซ้ำซ้อนตามช่วงเวลานี้
+var CANCEL_REQUEST_COLS_=['สถานะคำขอยกเลิก','รหัสผู้ขอยกเลิก','ชื่อผู้ขอยกเลิก','เหตุผลการขอยกเลิก','วันที่ขอยกเลิก','ผู้พิจารณาคำขอยกเลิก','วันที่พิจารณาคำขอยกเลิก'];
 var STATUS={PENDING:'รอดำเนินการ',APPROVED:'อนุมัติแล้ว',ASSIGNED:'จัดรถแล้ว',IN_USE:'กำลังใช้งาน',DONE:'เสร็จสิ้น',CANCELLED:'ยกเลิก',REJECTED:'ปฏิเสธ'};
 var ADMIN_NAMES=['Admin01','Admin02','Admin03','Admin00','SAdmin'];
 var AUDIT_SHEET_NAME='AuditLog';
@@ -103,7 +104,7 @@ function formatTime_(v){if(!v)return '';if(v instanceof Date)return Utilities.fo
 function ensureRequestColumns_(sh){
   // เพิ่มหัวคอลัมน์ใหม่ต่อท้ายชีต Requests เมื่อยังไม่มี (ไม่แตะคอลัมน์/ข้อมูลเดิม)
   var lastCol=Math.max(sh.getLastColumn(),1),headers=sh.getRange(1,1,1,lastCol).getValues()[0];
-  [REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_,DRIVER_FROM_COL_,DRIVER_TO_COL_].forEach(function(name){
+  [REQ_DRIVER_NAME_COL_,REQ_PHONE_COL_,DRIVER_FROM_COL_,DRIVER_TO_COL_].concat(CANCEL_REQUEST_COLS_).forEach(function(name){
     if(headers.indexOf(name)>=0)return;
     var need=headers.length+1;
     if(sh.getMaxColumns()<need)sh.insertColumnsAfter(sh.getMaxColumns(),need-sh.getMaxColumns());
@@ -116,7 +117,7 @@ function ensureRequestColumns_(sh){
 function cleanPhone_(v){return String(v==null?'':v).trim().replace(/[^\d+\-\s()]/g,'').slice(0,30);}
 function formatPhone_(v){var s=String(v==null?'':v).trim();return /^\d{9}$/.test(s)?'0'+s:s;} // ข้อมูลที่ Sheets แปลงเป็นตัวเลขจนเลข 0 นำหน้าหาย
 function requestToClient_(r){
-  return {id:String(r.id||''),staffId:String(r['รหัสบุคลากร']||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),driverFrom:dutyValue_(r[DRIVER_FROM_COL_]),driverTo:dutyValue_(r[DRIVER_TO_COL_]),requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),requesterPhone:formatPhone_(r[REQ_PHONE_COL_]),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||'')};
+  return {id:String(r.id||''),staffId:String(r['รหัสบุคลากร']||''),name:String(r['ชื่อ-นามสกุล']||''),position:String(r['ตำแหน่ง']||''),department:String(r['สังกัด']||''),destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ']),needDriver:String(r['ต้องการคนขับ']||''),companionCount:Number(r['จำนวนผู้ร่วมเดินทาง'])||0,companionNames:String(r['รายชื่อผู้ร่วมเดินทาง']||''),isLarge:String(r['ทริปใหญ่']||''),students:Number(r['จำนวนนักเรียน'])||0,teachers:Number(r['จำนวนครู'])||0,others:Number(r['จำนวนอื่นๆ'])||0,status:String(r['สถานะ']||''),vehicles:String(r['รถที่จัด']||''),driver:String(r[DRIVER_COL_]||''),driverFrom:dutyValue_(r[DRIVER_FROM_COL_]),driverTo:dutyValue_(r[DRIVER_TO_COL_]),requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),requesterPhone:formatPhone_(r[REQ_PHONE_COL_]),recordedBy:String(r['ผู้บันทึก']||''),note:String(r['หมายเหตุ']||''),cancelRequestStatus:String(r['สถานะคำขอยกเลิก']||''),cancelStaffId:String(r['รหัสผู้ขอยกเลิก']||''),cancelName:String(r['ชื่อผู้ขอยกเลิก']||''),cancelReason:String(r['เหตุผลการขอยกเลิก']||''),cancelReviewedBy:String(r['ผู้พิจารณาคำขอยกเลิก']||'')};
 }
 // อ่านอย่างเดียว: ดึงข้อมูลล่าสุดของคำขอ 1 รายการตาม Request ID สำหรับพิมพ์ใบอนุญาต (ไม่เปลี่ยนสถานะ ไม่เขียนชีต ไม่เขียน AuditLog)
 function getRequestForPrint(id,adminToken){
@@ -725,10 +726,28 @@ function getBookingsForMonth(year,month){
     vehicles:String(r['รถที่จัด']||''),
     driver:String(r[DRIVER_COL_]||''),
     requestedDriver:String(r[REQ_DRIVER_NAME_COL_]||''),
-    note:String(r['หมายเหตุ']||'')
+    note:String(r['หมายเหตุ']||''),id:String(r.id||''),staffId:String(r['รหัสบุคลากร']||''),cancelRequestStatus:String(r['สถานะคำขอยกเลิก']||''),cancelStaffId:String(r['รหัสผู้ขอยกเลิก']||''),cancelName:String(r['ชื่อผู้ขอยกเลิก']||''),cancelReason:String(r['เหตุผลการขอยกเลิก']||'')
   };});
 }
 function getAllRequests(adminToken){requireAdminSession_(adminToken);return rowsToObjects_(sheet_(SHEETS.REQUESTS)).map(requestToClient_).sort(function(a,b){return a.dateGo<b.dateGo?1:a.dateGo>b.dateGo?-1:0;});}
+
+
+function normalizeDuplicateText_(v){return String(v==null?'':v).trim().toLowerCase().replace(/\\s+/g,' ');}
+function findDuplicateBooking_(payload){
+  var rows=rowsToObjects_(sheet_(SHEETS.REQUESTS)),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
+  var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i],st=String(r['สถานะ']||STATUS.PENDING);if(excluded.indexOf(st)>=0)continue;
+    if(!same(r['รหัสบุคลากร'],payload.staffId)||!same(r['ชื่อ-นามสกุล'],payload.name)||!same(r['ปลายทาง'],payload.destination))continue;
+    if(!sameDateValue_(r['วันที่ไป'],payload.dateGo)||normalizeTimeValue_(r['เวลาไป'])!==normalizeTimeValue_(payload.timeGo))continue;
+    if(!sameDateValue_(r['วันที่กลับ'],payload.dateBack)||normalizeTimeValue_(r['เวลากลับ'])!==normalizeTimeValue_(payload.timeBack))continue;
+    if(!same(r['รายชื่อผู้ร่วมเดินทาง'],payload.companionNames))continue;
+    var oldNeed=String(r['ต้องการคนขับ']||'').trim()==='ต้องการ',newNeed=(payload.needDriver===true||payload.needDriver==='1'||payload.needDriver==='ต้องการ');
+    if(oldNeed!==newNeed)continue;if(!newNeed&&!same(r[REQ_DRIVER_NAME_COL_],payload.requestedDriver))continue;
+    return {id:String(r.id||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ'])};
+  }return null;
+}
+function checkDuplicateBooking(payload){payload=payload||{};var match=findDuplicateBooking_(payload);return {duplicate:!!match,match:match};}
 
 function saveRequest(data,sessionToken){
   data=data||{};
@@ -760,6 +779,7 @@ function saveRequest(data,sessionToken){
   if(data.timeBack&&!/^\d{2}:\d{2}$/.test(String(data.timeBack)))throw new Error('รูปแบบเวลากลับไม่ถูกต้อง');
   var lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
+    var duplicate=findDuplicateBooking_(data);if(duplicate)throw new Error('DUPLICATE_BOOKING: ระบบตรวจพบการจองรถในรายละเอียดเดียวกัน กรุณาตรวจสอบการจองใช้รถยนต์');
     var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);
     var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],row=new Array(headers.length).fill(''),id='R'+new Date().getTime()+'-'+Utilities.getUuid().substring(0,6).toUpperCase();
     var map={id:id,timestamp:new Date(),'รหัสบุคลากร':data.staffId||'','ชื่อ-นามสกุล':data.name,'ตำแหน่ง':data.position,'สังกัด':data.department,'ปลายทาง':data.destination,'วัตถุประสงค์':data.purpose,'วันที่ไป':data.dateGo,'เวลาไป':data.timeGo,'วันที่กลับ':data.dateBack||'','เวลากลับ':data.timeBack||'','ต้องการคนขับ':data.needDriver===true||data.needDriver==='1'||data.needDriver==='ต้องการ'?'ต้องการ':'ไม่ต้องการ','จำนวนผู้ร่วมเดินทาง':Number(data.companionCount)||0,'รายชื่อผู้ร่วมเดินทาง':data.companionNames||'','ทริปใหญ่':'','จำนวนนักเรียน':Number(data.students)||0,'จำนวนครู':Number(data.teachers)||0,'จำนวนอื่นๆ':Number(data.others)||0,'สถานะ':STATUS.PENDING,'รถที่จัด':'','ผู้บันทึก':data.recordedBy||'','หมายเหตุ':data.note||''};
@@ -830,6 +850,35 @@ function saveRequestWithAudit(payload,adminToken){
   appendAuditLog_('CREATE',result.id,actingAdmin.account,'',STATUS.PENDING,'',{type:'CREATE',savedRequestId:result.id});
   return result;
 }
+
+function requestCancelBooking(payload){
+  payload=payload||{};var id=String(payload.id||'').trim(),staffId=normalizeStaffId_(payload.staffId),name=String(payload.name||'').trim(),reason=String(payload.reason||'').trim();
+  if(!id||!staffId||!name||!reason)throw new Error('กรุณากรอกรหัสประจำตัวครู ชื่อผู้ขอยกเลิก และสาเหตุให้ครบถ้วน');
+  if(reason.length>1000)throw new Error('สาเหตุการยกเลิกยาวเกิน 1,000 ตัวอักษร');
+  var lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบคำร้องใช้รถรายการนี้');
+    var r=found.object;if(normalizeStaffId_(r['รหัสบุคลากร'])!==staffId||normalizeDuplicateText_(r['ชื่อ-นามสกุล'])!==normalizeDuplicateText_(name))throw new Error('รหัสประจำตัวครูหรือชื่อไม่ตรงกับข้อมูลผู้ขอใช้รถ');
+    var staff=lookupStaffByIdWithoutAuth_(staffId);if(staff&&normalizeDuplicateText_(staff.name)!==normalizeDuplicateText_(name))throw new Error('ชื่อไม่ตรงกับทะเบียนบุคลากร กรุณาตรวจสอบข้อมูล');
+    var status=String(r['สถานะ']||STATUS.PENDING);if([STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE].indexOf(status)>=0)throw new Error('คำร้องนี้สิ้นสุดแล้ว ไม่สามารถขอยกเลิกซ้ำได้');
+    if(String(r['สถานะคำขอยกเลิก']||'')==='รอพิจารณา')throw new Error('คำร้องนี้มีคำขอยกเลิกอยู่ระหว่างรอแอดมินพิจารณาแล้ว');
+    var sh=found.sheet,headers=found.headers;function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
+    set('สถานะคำขอยกเลิก','รอพิจารณา');set('รหัสผู้ขอยกเลิก',staffId);set('ชื่อผู้ขอยกเลิก',name);set('เหตุผลการขอยกเลิก',reason);set('วันที่ขอยกเลิก',new Date());
+    appendAuditLog_('CANCEL_REQUEST_SUBMITTED',id,name,status,status,String(r['รถที่จัด']||''),{type:'CANCEL_REQUEST_SUBMITTED',staffId:staffId,name:name,reason:reason});return {ok:true};
+  }finally{lock.releaseLock();}
+}
+function resolveCancelRequest(id,approve,adminToken){
+  var admin=requireAdminSession_(adminToken),lock=LockService.getScriptLock();lock.waitLock(10000);
+  try{
+    var found=findRequestRowById_(id);if(!found)throw new Error('ไม่พบคำร้องใช้รถ');var r=found.object;
+    if(String(r['สถานะคำขอยกเลิก']||'')!=='รอพิจารณา')throw new Error('ไม่มีคำขอยกเลิกที่รอพิจารณา');
+    var oldStatus=String(r['สถานะ']||STATUS.PENDING),newStatus=approve?STATUS.CANCELLED:oldStatus,decision=approve?'ดำเนินการแล้ว':'ไม่อนุมัติ';
+    var sh=found.sheet,headers=found.headers;function set(h,v){var c=headers.indexOf(h);if(c<0)throw new Error('ไม่พบคอลัมน์ '+h);sh.getRange(found.row,c+1).setValue(v);}
+    if(approve)set('สถานะ',STATUS.CANCELLED);set('สถานะคำขอยกเลิก',decision);set('ผู้พิจารณาคำขอยกเลิก',admin.account);set('วันที่พิจารณาคำขอยกเลิก',new Date());
+    appendAuditLog_(approve?'CANCEL_REQUEST_APPROVED':'CANCEL_REQUEST_DECLINED',id,admin.account,oldStatus,newStatus,String(r['รถที่จัด']||''),{type:'CANCEL_REQUEST_REVIEWED',approved:!!approve,requester:r['ชื่อผู้ขอยกเลิก']||'',staffId:r['รหัสผู้ขอยกเลิก']||'',reason:r['เหตุผลการขอยกเลิก']||''});return {ok:true,status:newStatus};
+  }finally{lock.releaseLock();}
+}
+
 function updateRequestStatusWithAudit(id,status,vehicles,recordedBy,note,adminToken,driver,driverFrom,driverTo){
   var actingAdmin=requireAdminSession_(adminToken); recordedBy=actingAdmin.account;
   var before=findRequestRowById_(id); if(!before)throw new Error('ไม่พบรายการคำขอ: '+id);
