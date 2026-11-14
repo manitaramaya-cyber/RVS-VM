@@ -761,6 +761,10 @@ function saveRequest(data,sessionToken){
   var lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
     var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);
+    var duplicateMatches=findDuplicateRequests_(data);
+    var confirmedIds=Array.isArray(data.confirmedDuplicateIds)?data.confirmedDuplicateIds.map(function(x){return String(x);}):[];
+    var unconfirmedMatches=duplicateMatches.filter(function(x){return confirmedIds.indexOf(x.id)<0;});
+    if(unconfirmedMatches.length)return {ok:false,duplicate:true,matches:duplicateMatches};
     var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],row=new Array(headers.length).fill(''),id='R'+new Date().getTime()+'-'+Utilities.getUuid().substring(0,6).toUpperCase();
     var map={id:id,timestamp:new Date(),'รหัสบุคลากร':data.staffId||'','ชื่อ-นามสกุล':data.name,'ตำแหน่ง':data.position,'สังกัด':data.department,'ปลายทาง':data.destination,'วัตถุประสงค์':data.purpose,'วันที่ไป':data.dateGo,'เวลาไป':data.timeGo,'วันที่กลับ':data.dateBack||'','เวลากลับ':data.timeBack||'','ต้องการคนขับ':data.needDriver===true||data.needDriver==='1'||data.needDriver==='ต้องการ'?'ต้องการ':'ไม่ต้องการ','จำนวนผู้ร่วมเดินทาง':Number(data.companionCount)||0,'รายชื่อผู้ร่วมเดินทาง':data.companionNames||'','ทริปใหญ่':'','จำนวนนักเรียน':Number(data.students)||0,'จำนวนครู':Number(data.teachers)||0,'จำนวนอื่นๆ':Number(data.others)||0,'สถานะ':STATUS.PENDING,'รถที่จัด':'','ผู้บันทึก':data.recordedBy||'','หมายเหตุ':data.note||''};
     map[REQ_DRIVER_NAME_COL_]=data.requestedDriver;map[REQ_PHONE_COL_]=data.requesterPhone;
@@ -778,10 +782,6 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
   var lock=LockService.getScriptLock(); lock.waitLock(10000);
   try {
     var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],rows=rowsToObjects_(sh),target=rows.find(function(r){return String(r.id)===String(id);});
-    var duplicateMatches=findDuplicateRequests_(data);
-    var confirmedIds=Array.isArray(data.confirmedDuplicateIds)?data.confirmedDuplicateIds.map(function(x){return String(x);}):[];
-    var unconfirmedMatches=duplicateMatches.filter(function(x){return confirmedIds.indexOf(x.id)<0;});
-    if(unconfirmedMatches.length)return {ok:false,duplicate:true,matches:duplicateMatches};
     if(!target)throw new Error('ไม่พบคำขอรหัส: '+id);
     function col(n){var i=headers.indexOf(n);if(i<0)throw new Error('ไม่พบคอลัมน์ '+n+' ในชีต Requests');return i+1;}
     var selectedVehicleNames=String(vehiclesCsv||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
