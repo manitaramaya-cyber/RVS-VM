@@ -21,6 +21,8 @@ var ADMIN_ACCOUNTS_={
 };
 var ADMIN_SESSION_PREFIX_='RVSVM_ADMIN_SESSION_';
 var ADMIN_SESSION_TTL_SECONDS_=21600;
+var ALLOCATION_BUFFER_MINUTES_=30; // V1.3.0: ช่วงเว้นระหว่างงานของรถ/คนขับคนเดิม (นาที) — ต้องตรงกับ ALLOCATION_BUFFER_MIN ใน Admin.html
+var DUPLICATE_NOTE_MIN_LENGTH_=5; // V1.3.0: ความยาวขั้นต่ำของหมายเหตุเมื่อผู้ขอยืนยันว่า "ไม่ซ้ำ" (ต้องตรงกับ DUP_NOTE_MIN ใน Calendar.html)
 function sha256Hex_(value){
   var bytes=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,String(value||''),Utilities.Charset.UTF_8);
   return bytes.map(function(b){var n=(b+256)%256;return ('0'+n.toString(16)).slice(-2);}).join('');
@@ -683,6 +685,37 @@ function dutyRange_(o){
   if(f&&t&&f<t)return {start:f,end:t,d1:f.slice(0,10),d2:t.slice(0,10),t1:f.slice(11,16),t2:t.slice(11,16),explicit:true};
   var k=driverRangeKey_(o);k.explicit=false;return k;
 }
+// V1.3.0: ตรวจรถ/คนขับชนกัน — คืน 0 = ว่าง, 1 = เวลาทับซ้อนจริง, 2 = ไม่ทับแต่ชิดกันเกิน Buffer
+function activeAllocStatuses_(){return [STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE];}
+function splitVehicles_(v){return String(v==null?'':v).split(',').map(function(x){return x.trim();}).filter(Boolean);}
+function rangeMs_(k){
+  var p=function(s){var m=String(s||'').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})/);return m?Date.UTC(Number(m[1]),Number(m[2])-1,Number(m[3]),Number(m[4]),Number(m[5])):NaN;};
+  return {s:p(k.start),e:p(k.end)};
+}
+function rangesClash_(a,b){
+  var x=rangeMs_(a),y=rangeMs_(b),buf=ALLOCATION_BUFFER_MINUTES_*60000;
+  if(isNaN(x.s)||isNaN(x.e)||isNaN(y.s)||isNaN(y.e))return 0;
+  if(x.s<y.e&&y.s<x.e)return 1;
+  return (x.s<y.e+buf&&y.s<x.e+buf)?2:0;
+}
+function rangeText_(k){return k.d1===k.d2?thaiDateText_(k.d1)+' เวลา '+k.t1+' - '+k.t2+' น.':'ตั้งแต่'+thaiDateText_(k.d1)+' เวลา '+k.t1+' น. ถึง'+thaiDateText_(k.d2)+' เวลา '+k.t2+' น.';}
+function bufferText_(){return ' — ใกล้กันเกินไป ต้องเว้นระยะอย่างน้อย '+ALLOCATION_BUFFER_MINUTES_+' นาทีระหว่างงาน';}
+// รถแต่ละคันถูกล็อกแยกจากคนขับ: ดูเฉพาะคอลัมน์ "รถที่จัด" ของคำขอที่อยู่ในสถานะอนุมัติ/จัดรถแล้ว/กำลังใช้งาน
+// ยกเลิก/ปฏิเสธ/เสร็จสิ้น หรือเอารถออกจากรายการ = หลุดจากสถานะที่ล็อก ระบบปลดล็อกให้อัตโนมัติ
+function findVehicleConflicts_(rows,target,vehicleNames){
+  var out=[],names=vehicleNames||[];if(!names.length)return out;
+  var active=activeAllocStatuses_(),me=driverRangeKey_(target);
+  rows.forEach(function(o){
+    if(String(o.id)===String(target.id))return;
+    if(active.indexOf(String(o['สถานะ']||''))<0)return;
+    var theirs=splitVehicles_(o['รถที่จัด']);
+    var shared=names.filter(function(n){return theirs.indexOf(n)>-1;});
+    if(!shared.length)return;
+    var k=driverRangeKey_(o),c=rangesClash_(me,k);
+    if(c)out.push({row:o,range:k,vehicles:shared,bufferOnly:c===2});
+  });
+  return out;
+}
 function findDriverConflict_(rows,target,driver,win){
   var active=[STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE],me=win||dutyRange_(target);
   for(var i=0;i<rows.length;i++){
@@ -690,7 +723,7 @@ function findDriverConflict_(rows,target,driver,win){
     if(String(o[DRIVER_COL_]||'').trim()!==driver)continue;
     if(active.indexOf(String(o['สถานะ']||''))<0)continue;
     var k=dutyRange_(o);
-    if(me.start<k.end&&k.start<me.end)return {row:o,range:k};
+    var c=rangesClash_(me,k);if(c)return {row:o,range:k,bufferOnly:c===2};
   }
   return null;
 }
@@ -776,7 +809,20 @@ function findDuplicateBooking_(payload){
     return {id:String(r.id||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ'])};
   }return null;
 }
-function checkDuplicateBooking(payload){payload=payload||{};var match=findDuplicateBooking_(payload);return {duplicate:!!match,match:match};}
+// V1.3.0: ตรวจรายการคล้ายกันสำหรับฟอร์มสาธารณะ (Calendar.html) — วันที่ไป + เวลาไป + ปลายทาง + วัตถุประสงค์ เหมือนกัน
+// ไม่บล็อกถาวร: ผู้ขอกด "ยืนยันว่าไม่ซ้ำ" พร้อมระบุหมายเหตุเพิ่มเติมได้ (ฟอร์มฝั่ง Admin ยังใช้ findDuplicateBooking_ แบบเดิม)
+function findSimilarBooking_(payload){
+  var requestSheet=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(requestSheet);
+  var rows=rowsToObjects_(requestSheet),excluded=[STATUS.CANCELLED,STATUS.REJECTED,STATUS.DONE];
+  var same=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
+  for(var i=0;i<rows.length;i++){
+    var r=rows[i],st=String(r['สถานะ']||STATUS.PENDING);if(excluded.indexOf(st)>=0)continue;
+    if(!sameDateValue_(r['วันที่ไป'],payload.dateGo)||normalizeTimeValue_(r['เวลาไป'])!==normalizeTimeValue_(payload.timeGo))continue;
+    if(!same(r['ปลายทาง'],payload.destination)||!same(r['วัตถุประสงค์'],payload.purpose))continue;
+    return {id:String(r.id||''),dateGo:formatDate_(r['วันที่ไป']),timeGo:formatTime_(r['เวลาไป']),dateBack:formatDate_(r['วันที่กลับ']),timeBack:formatTime_(r['เวลากลับ'])};
+  }return null;
+}
+function checkDuplicateBooking(payload){payload=payload||{};var match=findSimilarBooking_(payload);return {duplicate:!!match,match:match};}
 
 function saveRequest(data,sessionToken){
   data=data||{};
@@ -808,7 +854,18 @@ function saveRequest(data,sessionToken){
   if(data.timeBack&&!/^\d{2}:\d{2}$/.test(String(data.timeBack)))throw new Error('รูปแบบเวลากลับไม่ถูกต้อง');
   var lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
-    var duplicate=findDuplicateBooking_(data);if(duplicate)throw new Error('DUPLICATE_BOOKING: ระบบตรวจพบการจองรถในรายละเอียดเดียวกัน กรุณาตรวจสอบการจองใช้รถยนต์');
+    var duplicate=null,duplicateConfirmed=false;
+    if(adminSession){
+      duplicate=findDuplicateBooking_(data);if(duplicate)throw new Error('DUPLICATE_BOOKING: ระบบตรวจพบการจองรถในรายละเอียดเดียวกัน กรุณาตรวจสอบการจองใช้รถยนต์');
+    }else{
+      duplicate=findSimilarBooking_(data);
+      if(duplicate){
+        var notDupFlag=(data.confirmedNotDuplicate===true||data.confirmedNotDuplicate==='1');
+        if(!notDupFlag)throw new Error('DUPLICATE_BOOKING: ดูเหมือนว่าท่านจะทำรายการซ้ำ กรุณาตรวจสอบการจองใช้รถยนต์');
+        if(String(data.note||'').trim().length<DUPLICATE_NOTE_MIN_LENGTH_)throw new Error('DUPLICATE_NOTE_REQUIRED: กรุณาระบุวัตถุประสงค์เพิ่มเติมในช่องหมายเหตุ (อย่างน้อย '+DUPLICATE_NOTE_MIN_LENGTH_+' ตัวอักษร) เพื่อยืนยันว่าไม่ใช่การจองซ้ำ');
+        duplicateConfirmed=true;
+      }
+    }
     var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);
     var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],row=new Array(headers.length).fill(''),id='R'+new Date().getTime()+'-'+Utilities.getUuid().substring(0,6).toUpperCase();
     var map={id:id,timestamp:new Date(),'รหัสบุคลากร':data.staffId||'','ชื่อ-นามสกุล':data.name,'ตำแหน่ง':data.position,'สังกัด':data.department,'ปลายทาง':data.destination,'วัตถุประสงค์':data.purpose,'วันที่ไป':data.dateGo,'เวลาไป':data.timeGo,'วันที่กลับ':data.dateBack||'','เวลากลับ':data.timeBack||'','ต้องการคนขับ':data.needDriver===true||data.needDriver==='1'||data.needDriver==='ต้องการ'?'ต้องการ':'ไม่ต้องการ','จำนวนผู้ร่วมเดินทาง':Number(data.companionCount)||0,'รายชื่อผู้ร่วมเดินทาง':data.companionNames||'','ทริปใหญ่':'','จำนวนนักเรียน':Number(data.students)||0,'จำนวนครู':Number(data.teachers)||0,'จำนวนอื่นๆ':Number(data.others)||0,'สถานะ':STATUS.PENDING,'รถที่จัด':'','ผู้บันทึก':data.recordedBy||'','หมายเหตุ':data.note||''};
@@ -816,7 +873,7 @@ function saveRequest(data,sessionToken){
     headers.forEach(function(h,i){if(Object.prototype.hasOwnProperty.call(map,h))row[i]=map[h];});sh.appendRow(row);
     var phoneIdx=headers.indexOf(REQ_PHONE_COL_);
     if(phoneIdx>=0&&data.requesterPhone)sh.getRange(sh.getLastRow(),phoneIdx+1).setNumberFormat('@').setValue(data.requesterPhone); // บังคับเป็นข้อความ เลข 0 นำหน้าไม่หาย
-    appendAuditLog_(adminSession?'CREATE_BY_ADMIN':'PUBLIC_BOOKING_SUBMITTED',id,data.recordedBy,'',STATUS.PENDING,'',{type:adminSession?'CREATE_BY_ADMIN':'PUBLIC_BOOKING_SUBMITTED',requestId:id,submittedName:data.name,destination:data.destination});
+    appendAuditLog_(adminSession?'CREATE_BY_ADMIN':'PUBLIC_BOOKING_SUBMITTED',id,data.recordedBy,'',STATUS.PENDING,'',{type:adminSession?'CREATE_BY_ADMIN':'PUBLIC_BOOKING_SUBMITTED',requestId:id,submittedName:data.name,destination:data.destination,duplicateConfirmed:duplicateConfirmed,duplicateOf:duplicateConfirmed&&duplicate?duplicate.id:''});
     return {id:id,ok:true};
   }finally{lock.releaseLock();}
 }
@@ -831,6 +888,14 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
     function col(n){var i=headers.indexOf(n);if(i<0)throw new Error('ไม่พบคอลัมน์ '+n+' ในชีต Requests');return i+1;}
     var selectedVehicleNames=String(vehiclesCsv||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
     if(selectedVehicleNames.length){var fleet=rowsToObjects_(sheet_(SHEETS.VEHICLES));selectedVehicleNames.forEach(function(n){var found=null;fleet.forEach(function(v){if(String(v['ชื่อรถ']||'').trim()===n)found=v;});if(!found)throw new Error('ไม่พบรถ "'+n+'" ในทะเบียนรถ');if(vehiclePermission_(found)==='RESTRICTED')throw new Error('รถ '+n+' เป็นรถผู้บริหาร ไม่สามารถนำมาจัดสรรให้คำขอใช้รถได้');});}
+    if(selectedVehicleNames.length&&activeAllocStatuses_().indexOf(String(status))>-1){
+      // V1.3.0: รถติดภารกิจห้ามเลือกซ้ำ — ตรวจในล็อกของ GAS จากข้อมูลล่าสุดในชีต กันแอดมินหลายคนจัดรถคันเดียวกันพร้อมกัน
+      // รถที่เคยบันทึกไว้แล้วกับคำขอนี้ (ที่อยู่ในสถานะล็อกอยู่แล้ว) ไม่ถูกตรวจซ้ำ เพื่อไม่ให้ทับพฤติกรรมเดิมของรายการเก่าที่ "รับทราบ" ไว้
+      var prevVeh=splitVehicles_(target['รถที่จัด']),wasActive=activeAllocStatuses_().indexOf(String(target['สถานะ']||''))>-1;
+      var toCheck=selectedVehicleNames.filter(function(n){return !wasActive||prevVeh.indexOf(n)<0;});
+      var vHits=findVehicleConflicts_(rows,target,toCheck);
+      if(vHits.length){var vh=vHits[0];throw new Error('รถ '+vh.vehicles.join(', ')+' ติดภารกิจแล้วใน'+rangeText_(vh.range)+' (รายการของ '+String(vh.row['ชื่อ-นามสกุล']||'-')+')'+(vh.bufferOnly?bufferText_():'')+' กรุณาเลือกรถคันอื่น หรือเปลี่ยนการจัดรถของรายการก่อนหน้า');}
+    }
     var driverToSet=null,dutyFrom='',dutyTo='';
     if(driver!==undefined&&driver!==null){
       driver=String(driver).trim();
@@ -841,7 +906,7 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
         if(dutyFrom>=dutyTo)throw new Error('เวลาสิ้นสุดการปฏิบัติหน้าที่ของคนขับต้องอยู่หลังเวลาเริ่มต้น');
         if([STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE].indexOf(String(status))>-1){
           var hit=findDriverConflict_(rows,target,driver,{start:dutyFrom,end:dutyTo});
-          if(hit)throw new Error('พนักงานขับรถ '+driver+' ถูกจัดให้ขับรถแล้วใน'+(hit.range.d1===hit.range.d2?thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' - '+hit.range.t2+' น.':'ตั้งแต่'+thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' น. ถึง'+thaiDateText_(hit.range.d2)+' เวลา '+hit.range.t2+' น.')+' (รายการของ '+String(hit.row['ชื่อ-นามสกุล']||'-')+') กรุณาเลือกพนักงานขับรถรายอื่น หรือเปลี่ยนคนขับของรายการก่อนหน้า');
+          if(hit)throw new Error('พนักงานขับรถ '+driver+' ถูกจัดให้ขับรถแล้วใน'+(hit.range.d1===hit.range.d2?thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' - '+hit.range.t2+' น.':'ตั้งแต่'+thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' น. ถึง'+thaiDateText_(hit.range.d2)+' เวลา '+hit.range.t2+' น.')+' (รายการของ '+String(hit.row['ชื่อ-นามสกุล']||'-')+')'+(hit.bufferOnly?bufferText_():'')+' กรุณาเลือกพนักงานขับรถรายอื่น หรือเปลี่ยนคนขับของรายการก่อนหน้า');
         }
       }
       driverToSet=driver;
@@ -1125,6 +1190,11 @@ function updateRequestDetails(id,data,adminToken){
     if(needDriver&&drv&&[STATUS.APPROVED,STATUS.ASSIGNED,STATUS.IN_USE].indexOf(status)>-1&&after){
       var hit=findDriverConflict_(rowsToObjects_(found.sheet),after.object,drv);
       if(hit)warning='แก้ไขรายละเอียดเรียบร้อยแล้ว แต่ พนักงานขับรถ '+drv+' ซ้อนเวลากับรายการของ '+String(hit.row['ชื่อ-นามสกุล']||'-')+' ('+thaiDateText_(hit.range.d1)+' เวลา '+hit.range.t1+' - '+hit.range.t2+' น.) กรุณาตรวจสอบช่วงเวลาปฏิบัติหน้าที่ของคนขับในหน้าจัดรถ';
+    }
+    var vNames=splitVehicles_(found.object['รถที่จัด']);
+    if(vNames.length&&activeAllocStatuses_().indexOf(status)>-1&&after){
+      var vHit=findVehicleConflicts_(rowsToObjects_(found.sheet),after.object,vNames);
+      if(vHit.length)warning+=(warning?' | ':'แก้ไขรายละเอียดเรียบร้อยแล้ว แต่ ')+'รถ '+vHit[0].vehicles.join(', ')+' ติดภารกิจซ้อนเวลากับรายการของ '+String(vHit[0].row['ชื่อ-นามสกุล']||'-')+' ('+rangeText_(vHit[0].range)+')'+(vHit[0].bufferOnly?bufferText_():'')+' กรุณาตรวจสอบการจัดรถในหน้าจัดรถ';
     }
     appendAuditLog_('EDIT_DETAILS',id,admin,status,status,found.object['รถที่จัด']||'',{type:'EDIT_DETAILS',before:found.object,after:after?after.object:{}});
     return {ok:true,warning:warning};
