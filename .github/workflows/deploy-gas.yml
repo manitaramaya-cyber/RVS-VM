@@ -1,0 +1,68 @@
+name: Deploy RVS-VM to Google Apps Script
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rvs-vm-gas-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # Keep deployment disabled until the owner has added all required secrets
+    # and explicitly enables the repository variable GAS_DEPLOY_ENABLED=true.
+    if: ${{ vars.GAS_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check required deployment secrets
+        env:
+          CLASP_SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID }}
+          CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$CLASP_SCRIPT_ID" || { echo "::error::Missing CLASP_SCRIPT_ID secret"; exit 1; }
+          test -n "$CLASP_DEPLOYMENT_ID" || { echo "::error::Missing CLASP_DEPLOYMENT_ID secret"; exit 1; }
+          test -n "$CLASPRC_JSON" || { echo "::error::Missing CLASPRC_JSON secret"; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Google clasp
+        run: npm install --global @google/clasp
+
+      - name: Configure clasp
+        env:
+          CLASP_SCRIPT_ID: ${{ secrets.CLASP_SCRIPT_ID }}
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME"
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          printf '{"scriptId":"%s","rootDir":"."}\n' "$CLASP_SCRIPT_ID" > .clasp.json
+
+      - name: Validate Apps Script project connection
+        run: clasp status
+
+      - name: Push source files to Apps Script
+        run: clasp push --force
+
+      - name: Update the existing web app deployment
+        env:
+          CLASP_DEPLOYMENT_ID: ${{ secrets.CLASP_DEPLOYMENT_ID }}
+        run: |
+          set -euo pipefail
+          clasp deploy --deploymentId "$CLASP_DEPLOYMENT_ID" --description "GitHub Actions ${GITHUB_SHA::7}"
