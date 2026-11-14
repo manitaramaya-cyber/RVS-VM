@@ -1,0 +1,13 @@
+# Files that are not part of the Google Apps Script project
+.git/**
+.github/**
+README.md
+*.md
+*.txt
+*.docx
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.pdf
+.claspignore
