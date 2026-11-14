@@ -778,6 +778,10 @@ function updateRequestStatus(id,status,vehiclesCsv,recordedBy,note,adminToken,dr
   var lock=LockService.getScriptLock(); lock.waitLock(10000);
   try {
     var sh=sheet_(SHEETS.REQUESTS);ensureRequestColumns_(sh);var headers=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0],rows=rowsToObjects_(sh),target=rows.find(function(r){return String(r.id)===String(id);});
+    var duplicateMatches=findDuplicateRequests_(data);
+    var confirmedIds=Array.isArray(data.confirmedDuplicateIds)?data.confirmedDuplicateIds.map(function(x){return String(x);}):[];
+    var unconfirmedMatches=duplicateMatches.filter(function(x){return confirmedIds.indexOf(x.id)<0;});
+    if(unconfirmedMatches.length)return {ok:false,duplicate:true,matches:duplicateMatches};
     if(!target)throw new Error('ไม่พบคำขอรหัส: '+id);
     function col(n){var i=headers.indexOf(n);if(i<0)throw new Error('ไม่พบคอลัมน์ '+n+' ในชีต Requests');return i+1;}
     var selectedVehicleNames=String(vehiclesCsv||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
@@ -819,7 +823,34 @@ function forecastVehicles(students,teachers,others,adminToken){requireAdminSessi
 function getAuditSheet_(){var ss=ss_(),sh=ss.getSheetByName(AUDIT_SHEET_NAME);if(!sh){sh=ss.insertSheet(AUDIT_SHEET_NAME);sh.appendRow(['logId','timestamp','action','requestId','admin','oldStatus','newStatus','vehicles','detail']);sh.setFrozenRows(1);}return sh;}
 function appendAuditLog_(action,requestId,admin,oldStatus,newStatus,vehicles,detail){var sh=getAuditSheet_(),logId='LOG-'+Utilities.getUuid().substring(0,8).toUpperCase();sh.appendRow([logId,new Date(),action||'',requestId||'',admin||'',oldStatus||'',newStatus||'',vehicles||'',typeof detail==='string'?detail:JSON.stringify(detail||{})]);return logId;}
 function findRequestRowById_(id){var sh=sheet_(SHEETS.REQUESTS),values=sh.getDataRange().getValues();if(values.length<2)return null;var headers=values[0],idx=headers.indexOf('id');if(idx<0)throw new Error('ไม่พบคอลัมน์ id ในชีต Requests');for(var i=1;i<values.length;i++)if(String(values[i][idx])===String(id)){var obj={};headers.forEach(function(h,j){obj[h]=values[i][j];});return {sheet:sh,row:i+1,headers:headers,values:values[i],object:obj};}return null;}
-function findLatestMatchingRequest_(payload){var sh=sheet_(SHEETS.REQUESTS),values=sh.getDataRange().getValues();if(values.length<2)return null;var headers=values[0],idx={};headers.forEach(function(h,i){idx[h]=i;});var best=null,bestTs=0;for(var i=1;i<values.length;i++){var row=values[i];if(String(row[idx['ชื่อ-นามสกุล']]||'')!==String(payload.name||'')||String(row[idx['ปลายทาง']]||'')!==String(payload.destination||'')||!sameDateValue_(row[idx['วันที่ไป']],payload.dateGo)||normalizeTimeValue_(row[idx['เวลาไป']])!==normalizeTimeValue_(payload.timeGo))continue;var t=row[idx.timestamp],ts=t instanceof Date?t.getTime():new Date(t).getTime();if(ts>=bestTs){bestTs=ts;var obj={};headers.forEach(function(h,j){obj[h]=row[j];});best={row:i+1,object:obj};}}return best;}
+function normalizeDuplicateText_(value){return String(value==null?'':value).trim().replace(/\s+/g,' ').toLocaleLowerCase();}
+function duplicateDateValue_(value){if(!value)return '';if(value instanceof Date)return Utilities.formatDate(value,Session.getScriptTimeZone(),'yyyy-MM-dd');var s=String(value).trim();return /^\d{4}-\d{2}-\d{2}/.test(s)?s.substring(0,10):s;}
+function findDuplicateRequests_(payload){
+  var rows=rowsToObjects_(sheet_(SHEETS.REQUESTS)),matches=[];
+  var sameText=function(a,b){return normalizeDuplicateText_(a)===normalizeDuplicateText_(b);};
+  var sameDate=function(a,b){return duplicateDateValue_(a)===duplicateDateValue_(b);};
+  var sameTime=function(a,b){return normalizeTimeValue_(a)===normalizeTimeValue_(b);};
+  rows.forEach(function(r){
+    var status=String(r['สถานะ']||STATUS.PENDING);
+    if(status===STATUS.CANCELLED||status===STATUS.REJECTED)return;
+    if(!sameText(r['ชื่อ-นามสกุล'],payload.name)||
+       !sameText(r['ปลายทาง'],payload.destination)||
+       !sameDate(r['วันที่ไป'],payload.dateGo)||
+       !sameDate(r['วันที่กลับ'],payload.dateBack)||
+       !sameTime(r['เวลาไป'],payload.timeGo)||
+       !sameTime(r['เวลากลับ'],payload.timeBack)||
+       !sameText(r['วัตถุประสงค์'],payload.purpose)||
+       !sameText(r['หมายเหตุ'],payload.note))return;
+    matches.push({
+      id:String(r.id||''),name:String(r['ชื่อ-นามสกุล']||''),
+      destination:String(r['ปลายทาง']||''),purpose:String(r['วัตถุประสงค์']||''),
+      dateGo:duplicateDateValue_(r['วันที่ไป']),timeGo:normalizeTimeValue_(r['เวลาไป']),
+      dateBack:duplicateDateValue_(r['วันที่กลับ']),timeBack:normalizeTimeValue_(r['เวลากลับ']),
+      note:String(r['หมายเหตุ']||''),status:status
+    });
+  });
+  return matches;
+}
 function saveRequestWithAudit(payload,adminToken){
   var actingAdmin=requireAdminSession_(adminToken);
   payload=payload||{};
