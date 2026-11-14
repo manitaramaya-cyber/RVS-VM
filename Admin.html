@@ -397,6 +397,14 @@ textarea{
   width:auto;
   margin:0;
 }
+.vehicle-option.busy{
+  opacity:.6;
+  cursor:not-allowed;
+  border-style:dashed;
+}
+.vehicle-option.busy small{
+  color:#F0A79E;
+}
 .conflict{
   margin-top:9px;
   padding:8px 10px;
@@ -2174,6 +2182,32 @@ function overlap(aStart,aEnd,bStart,bEnd){
   }
   return aStart < bEnd && bStart < aEnd;
 }
+/* V1.3.0: ป้องกันจองซ้ำ — ช่วงเว้นระหว่างงานของรถ/คนขับคนเดิม ต้องเท่ากับ ALLOCATION_BUFFER_MINUTES_ ใน Code.gs */
+var ALLOCATION_BUFFER_MIN = 30;
+function bufferedOverlap(aStart,aEnd,bStart,bEnd){
+  if(!aStart || !aEnd || !bStart || !bEnd){
+    return false;
+  }
+  var buf = ALLOCATION_BUFFER_MIN * 60000;
+  return aStart.getTime() < bEnd.getTime() + buf && bStart.getTime() < aEnd.getTime() + buf;
+}
+function bufferNote(){ return 'ต้องเว้นระยะอย่างน้อย ' + ALLOCATION_BUFFER_MIN + ' นาทีระหว่างงาน'; }
+function splitVehicleList(v){
+  return String(v || '').split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+}
+function isAllocActive(r){
+  var st = String(r.status || '').trim();
+  return st === 'อนุมัติแล้ว' || st === 'จัดรถแล้ว' || st === 'กำลังใช้งาน';
+}
+function vehicleBusyHit(r, name, checkedStr){
+  if(checkedStr || !name){ return null; }
+  var st = String(r.status || '').trim();
+  if(st === 'ยกเลิก' || st === 'ปฏิเสธ' || st === 'เสร็จสิ้น'){ return null; }
+  return findConflicts(r, [name])[0] || null;
+}
+function vehicleBusyTag(hit){
+  return hit ? ' <small>ติดภารกิจ · ' + esc(hit.name || '-') + ' (' + esc(hit.dateGo || '-') + ')</small>' : '';
+}
 function sharedVehicles(a,b){
   var av=String(a.vehicles||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
   var bv=String(b.vehicles||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
@@ -2253,7 +2287,7 @@ function findConflicts(r,selectedVehicles){
       return;
     }
     if(
-      overlap(
+      bufferedOverlap(
         start,
         end,
         requestStart(other),
@@ -2315,13 +2349,15 @@ function renderRequests(){
               ? ' checked'
               : '';
           return (
-            '<label class="vehicle-option">' +
+            '<label class="vehicle-option' + (vehicleBusyHit(r, name, checked) ? ' busy' : '') + '">' +
             '<input type="checkbox" value="' +
             esc(name) +
             '"' +
             checked +
+            (vehicleBusyHit(r, name, checked) ? ' disabled' : '') +
             '>' +
             esc(name) +
+            vehicleBusyTag(vehicleBusyHit(r, name, checked)) +
             '</label>'
           );
         }).join('');
@@ -2347,7 +2383,7 @@ function renderRequests(){
       conflicts.forEach(function(other){
         var common=sharedVehicles(r,other);
         if(isConflictAcknowledged(r.id,other.id,common)) return;
-        conflictHint += '<div class="conflict">⚠ รถ '+esc(common.join(', '))+' มีช่วงเวลาใช้งานทับซ้อนกับ '+esc(other.name||'คำขออื่น')+' ('+esc(other.dateGo||'-')+' ถึง '+esc(other.dateBack||other.dateGo||'-')+'). กรุณาประสานผู้ขอและจัดรถใหม่ <button type="button" class="btn secondary small ackConflictBtn" data-id="'+esc(r.id)+'" data-other-id="'+esc(other.id)+'" data-vehicles="'+esc(common.join('|'))+'">รับทราบ</button></div>';
+        conflictHint += '<div class="conflict">⚠ รถ '+esc(common.join(', '))+' มีช่วงเวลาใช้งานทับซ้อนหรือชิดกันเกินไป ('+bufferNote()+') กับ '+esc(other.name||'คำขออื่น')+' ('+esc(other.dateGo||'-')+' ถึง '+esc(other.dateBack||other.dateGo||'-')+'). กรุณาประสานผู้ขอและจัดรถใหม่ <button type="button" class="btn secondary small ackConflictBtn" data-id="'+esc(r.id)+'" data-other-id="'+esc(other.id)+'" data-vehicles="'+esc(common.join('|'))+'">รับทราบ</button></div>';
       });
       var needsDriver = String(r.needDriver || '').trim() === 'ต้องการ';
       var driverBlock = '';
@@ -2525,7 +2561,7 @@ function findDriverConflicts(r, driverName, fromStr, toStr){
     if(String(o.id) === String(r.id)){ return false; }
     if(String(o.driver || '') !== driverName || !drvIsActive(o)){ return false; }
     var w2 = driverWindow(o);
-    return overlap(s, e, w2.start, w2.end);
+    return bufferedOverlap(s, e, w2.start, w2.end);
   }).sort(function(x, y){ return (driverWindow(x).start || 0) - (driverWindow(y).start || 0); });
 }
 function drvThaiDate(d){
@@ -2560,6 +2596,7 @@ function showDriverConflictModal(driverName, other, moreCount, onChange, onKeep)
         'พนักงานขับรถ <b>' + esc(driverName) + '</b> ถูกจัดให้ขับรถแล้วใน' + esc(drvRangeText(other)) +
         '<div class="drv-sub">รายการของ ' + esc(other.name || '-') + ' • ปลายทาง ' + esc(other.destination || '-') +
           (moreCount > 0 ? ' (และมีรายการทับซ้อนอีก ' + moreCount + ' รายการ)' : '') + '</div>' +
+        '<div class="drv-sub">ระบบไม่อนุญาตให้จัดซ้ำซ้อน — ' + esc(bufferNote()) + '</div>' +
         '<div class="drv-ask">ต้องการเปลี่ยนแปลง พนักงานขับรถ รายการก่อนหน้าหรือไม่</div>' +
       '</div>' +
       '<div class="drv-actions">' +
@@ -2606,11 +2643,29 @@ function updateDutyWarn(card){
     else if(df.value >= dt.value){ msg = '⚠ เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มปฏิบัติหน้าที่'; }
     else {
       var cf = findDriverConflicts(r, val, df.value, dt.value);
-      if(cf.length){ msg = '⚠ ซ้อนกับรายการของ ' + (cf[0].name || '-') + ' (' + drvRangeText(cf[0]) + ') — ต้องแก้ไขรายการใดรายการหนึ่งก่อนบันทึก'; }
+      if(cf.length){ msg = '⚠ ซ้อนกับรายการของ ' + (cf[0].name || '-') + ' (' + drvRangeText(cf[0]) + ') — ' + bufferNote() + ' ต้องแก้ไขรายการใดรายการหนึ่งก่อนบันทึก'; }
     }
   }
   warn.textContent = msg;
   warn.style.display = msg ? '' : 'none';
+}
+/* V1.3.0: คนขับที่ติดภารกิจในช่วงเวลาที่กรอกอยู่ กดเลือกไม่ได้ (คนขับที่เลือกไว้เดิมยังเห็นตามปกติ) */
+function refreshDriverOptions(card){
+  var sel = card && card.querySelector('.driverSel');
+  if(!sel){ return; }
+  var r = requests.find(function(x){ return String(x.id) === String(card.dataset.id); });
+  if(!r){ return; }
+  var df = card.querySelector('.dutyFrom'), dt = card.querySelector('.dutyTo');
+  var from = df ? df.value : '', to = dt ? dt.value : '';
+  if(!isValidLocalDateTime(from) || !isValidLocalDateTime(to) || from >= to){ from = ''; to = ''; }
+  var st = String(r.status || '').trim();
+  var skip = (st === 'ยกเลิก' || st === 'ปฏิเสธ' || st === 'เสร็จสิ้น');
+  Array.prototype.forEach.call(sel.options, function(opt){
+    if(!opt.value){ return; }
+    var busy = !skip && opt.value !== sel.value && findDriverConflicts(r, opt.value, from, to).length > 0;
+    opt.disabled = busy;
+    opt.textContent = busy ? opt.value + ' — ติดภารกิจ' : opt.value;
+  });
 }
 function attachDriverSelects(){
   document.querySelectorAll('.driverSel').forEach(function(sel){
@@ -2631,8 +2686,9 @@ function attachDriverSelects(){
   document.querySelectorAll('.dutyFrom, .dutyTo').forEach(function(inp){
     if(inp.dataset.bound === '1'){ return; }
     inp.dataset.bound = '1';
-    inp.addEventListener('change', function(){ updateDutyWarn(inp.closest('.request-card')); });
+    inp.addEventListener('change', function(){ var c = inp.closest('.request-card'); updateDutyWarn(c); refreshDriverOptions(c); });
   });
+  document.querySelectorAll('.request-card').forEach(refreshDriverOptions);
 }
 function attachRowButtons(){
   document
@@ -2670,17 +2726,28 @@ function attachRowButtons(){
             return;
           }
           if(
-            (
-              status === 'อนุมัติแล้ว' ||
-              status === 'จัดรถแล้ว'
-            ) &&
+            (status === 'อนุมัติแล้ว' || status === 'จัดรถแล้ว' || status === 'กำลังใช้งาน') &&
             checked.length
           ){
-            var conflicts =
-              findConflicts(
-                r,
-                checked
+            /* V1.3.0: รถติดภารกิจห้ามเลือกซ้ำ — บล็อกรถที่เพิ่งเลือกใหม่ (หรือรถที่ยังไม่เคยถูกล็อก) ถ้าชนกับงานอื่น */
+            var prevVeh = splitVehicleList(r.vehicles);
+            var wasActive = isAllocActive(r);
+            var newlyLocked = checked.filter(function(n){ return !wasActive || prevVeh.indexOf(n) < 0; });
+            var hardConf = findConflicts(r, newlyLocked);
+            if(hardConf.length){
+              var hc = hardConf[0];
+              var hcCommon = splitVehicleList(hc.vehicles).filter(function(n){ return newlyLocked.indexOf(n) > -1; });
+              alert(
+                '⛔ ไม่สามารถจัดรถได้\n\n' +
+                'รถ ' + hcCommon.join(', ') + ' ติดภารกิจแล้วในรายการของ ' + (hc.name || '-') +
+                ' (' + (hc.dateGo || '-') + ' ' + (hc.timeGo || '') + ' → ' + (hc.dateBack || hc.dateGo || '-') + ' ' + (hc.timeBack || '') + ')\n\n' +
+                bufferNote() + '\nกรุณาเลือกรถคันอื่น หรือเปลี่ยนการจัดรถของรายการก่อนหน้า'
               );
+              return;
+            }
+            /* รถที่เคยจัดไว้แล้วและมีรายการชนกันอยู่ก่อน (ข้อมูลเก่า) ยังใช้ขั้นตอนเตือนเดิม */
+            var legacyKept = checked.filter(function(n){ return newlyLocked.indexOf(n) < 0; });
+            var conflicts = findConflicts(r, legacyKept);
             if(conflicts.length){
               var names =
                 conflicts
@@ -2744,6 +2811,7 @@ function attachRowButtons(){
                 'บันทึกไม่สำเร็จ: ' +
                 (err.message || err)
               );
+              if(/ติดภารกิจ|ถูกจัดให้ขับรถแล้ว/.test(String((err && err.message) || err))){ loadRequests(); }
             })
             .updateRequestStatusWithAudit(
               id,
